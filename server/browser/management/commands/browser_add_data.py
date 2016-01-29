@@ -112,7 +112,7 @@ class Command(BaseCommand):
             print('Adding vqa data to db {}_{}...'.format(dataset, subset))
             self.add_vqas(all_data, dataset, subset, Image, Question, Answer)
 
-    @transaction.atomic
+#    @transaction.atomic
     def add_images(self, all_data, dataset, subset,
                    Image, url_base):
 
@@ -133,7 +133,7 @@ class Command(BaseCommand):
                                 )
                 img_obj.save()
 
-    @transaction.atomic
+#    @transaction.atomic
     def add_obj_annotations(self, all_data, dataset, subset,
                             Image, Category, Annotation):
 
@@ -168,7 +168,7 @@ class Command(BaseCommand):
                                          )
                     ann_obj.save()
 
-    @transaction.atomic
+#    @transaction.atomic
     def calc_obj_ann_counts(self, dataset, subset,
                             Image, Annotation, AnnotationCount):
 
@@ -187,7 +187,7 @@ class Command(BaseCommand):
                                             )
                 ann_count.save()
 
-    @transaction.atomic
+#    @transaction.atomic
     def add_captions(self, all_data, dataset, subset,
                      Image, Caption):
 
@@ -201,7 +201,7 @@ class Command(BaseCommand):
                                   )
                 ann_obj.save()
 
-    @transaction.atomic
+#    @transaction.atomic
     def add_vqas(self, all_data, dataset, subset,
                  Image, Question, Answer):
 
