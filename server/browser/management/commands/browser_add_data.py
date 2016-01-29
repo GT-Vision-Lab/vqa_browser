@@ -27,15 +27,15 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         commands = [
-#            'images',
-#            'annotations',
-#            'annotationcounts',
-#            'captions',
+            'images',
+            'annotations',
+            'annotationcounts',
+            'captions',
             'vqas',
         ]
 
         datasets = ['abstract_v002', 'mscoco']
-        datasets = ['abstract_v002']
+#        datasets = ['abstract_v002']
 #        datasets = ['mscoco']
 
         subsets = {
@@ -43,10 +43,10 @@ class Command(BaseCommand):
             'mscoco': ['val2014', 'train2014'],
         }
 
-        subsets = {
-                    'abstract_v002': ['val2015'],
-                    'mscoco': ['val2014'],
-                  }
+#        subsets = {
+#                    'abstract_v002': ['val2015'],
+#                    'mscoco': ['val2014'],
+#                  }
 
         for dataset in datasets:
             for subset in subsets[dataset]:
@@ -80,7 +80,7 @@ class Command(BaseCommand):
             fn = path.join(ann_data_dir, afn)
             with open(fn, 'r') as ifp:
                 all_data = json.load(ifp)
-            print(len(all_data))
+            print('Adding images to db {}_{}...'.format(dataset, subset))
             self.add_images(all_data, dataset, subset, Image, base_url)
         elif command == 'annotations':
             afn_fmt = '{}_instances_{}.json'
@@ -88,11 +88,11 @@ class Command(BaseCommand):
             fn = path.join(ann_data_dir, afn)
             with open(fn, 'r') as ifp:
                 all_data = json.load(ifp)
-            print(len(all_data))
+            print('Adding instance annotations to db {}_{}...'.format(dataset, subset))
             self.add_obj_annotations(
                 all_data, dataset, subset, Image, Category, Annotation)
         elif command == 'annotationcounts':
-            print('hi')
+            print('Adding annotation sums/counts to db {}_{}...'.format(dataset, subset))
             self.calc_obj_ann_counts(
                 dataset, subset, Image, Annotation, AnnotationCount)
         elif command == 'captions':
@@ -101,7 +101,7 @@ class Command(BaseCommand):
             fn = path.join(ann_data_dir, afn)
             with open(fn, 'r') as ifp:
                 all_data = json.load(ifp)
-            print(len(all_data))
+            print('Adding captions to db {}_{}...'.format(dataset, subset))
             self.add_captions(all_data, dataset, subset, Image, Caption)
         elif command == 'vqas':
             afn_fmt = '{}_vqas_{}.json'
@@ -109,7 +109,7 @@ class Command(BaseCommand):
             fn = path.join(ann_data_dir, afn)
             with open(fn, 'r') as ifp:
                 all_data = json.load(ifp)
-            print(len(all_data))
+            print('Adding vqa data to db {}_{}...'.format(dataset, subset))
             self.add_vqas(all_data, dataset, subset, Image, Question, Answer)
 
     @transaction.atomic
