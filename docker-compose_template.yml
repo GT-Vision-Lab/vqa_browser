@@ -1,0 +1,56 @@
+# Simple Python Template docker-compose config file
+# Gets filled in by create_docker-compose_config.py
+
+# nginx static server (forwards to Django for some things)
+nginx:
+    build: ./nginx
+    links:
+        - django
+    ports:
+        - 8081:80
+    volumes:
+        - .:$dock_share
+
+# django main website server
+django:
+    build: .
+    expose:
+        - 8000
+    links:
+        - postgres
+    volumes:
+        - .:$dock_share
+        - $ann_dir:/opt/browser_data
+    working_dir: $dock_share/server
+
+# postgres database
+# Changing db_dir might break things
+postgres:
+    image: postgres:9.4.5
+    environment:
+        PGDATA: $db_dir
+        POSTGRES_PASSWORD: '$db_pass'
+        POSTGRES_USER: $db_user
+    expose:
+        - $db_port
+    volumes:
+        - .:$dock_share
+        - $db_dir:$db_dir
+
+# let's you play with db while other container runs
+# (see db-related files in scripts/)
+# Changing data_dir might break things
+postgres-cmd:
+    command: exec sleep 1
+    image: postgres:9.4.5
+    environment:
+        PGDATABASE: $db_name
+        PGHOST: db # from the links part
+        PGPASSFILE: $dock_share/pg_pass_file
+        PGPORT: $db_port
+        PGUSER: $db_user
+    links:
+        - postgres:db
+    volumes:
+        - .:$dock_share
+        - $data_dir:$data_dir

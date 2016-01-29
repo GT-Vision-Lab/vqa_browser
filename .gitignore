@@ -1,0 +1,67 @@
+# Local folders to ignore
+data/
+db/
+__pycache__/
+
+# Settings-related files
+docker-compose.yml
+pg_pass_file
+
+# Images and other files
+###################
+*.mat
+*.json
+*.eps
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+*.bak*
+
+# Compiled source #
+###################
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.py[cod]
+
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Logs and databases #
+######################
+*.log
+*.sql
+*.sqlite
+
+# OS generated files #
+######################
+.DS_Store/
+*.DS_store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.*.swp
+.*.swo
+.*.swn
+.*.tmp
+.swp
+release
