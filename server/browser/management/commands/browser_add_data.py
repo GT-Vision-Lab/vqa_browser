@@ -27,15 +27,15 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         commands = [
-            'images',
-            'annotations',
-            'annotationcounts',
-            'captions',
+#            'images',
+#            'annotations',
+#            'annotationcounts',
+#            'captions',
             'vqas',
         ]
 
         datasets = ['abstract_v002', 'mscoco']
-#        datasets = ['abstract_v002']
+        datasets = ['abstract_v002']
 #        datasets = ['mscoco']
 
         subsets = {
@@ -43,10 +43,10 @@ class Command(BaseCommand):
             'mscoco': ['val2014', 'train2014'],
         }
 
-#        subsets = {
-#                    'abstract_v002': ['val2015'],
-#                    'mscoco': ['val2014'],
-#                  }
+        subsets = {
+                    'abstract_v002': ['val2015'],
+                    'mscoco': ['val2014'],
+                  }
 
         for dataset in datasets:
             for subset in subsets[dataset]:
@@ -205,8 +205,8 @@ class Command(BaseCommand):
     def add_vqas(self, all_data, dataset, subset,
                  Image, Question, Answer):
 
-        for img in data:
-            img_data = data[img]
+        for img in all_data:
+            img_data = all_data[img]
             img_parts = img.split('_')
             img_id = int(img_parts[-1].split('.')[0])
 

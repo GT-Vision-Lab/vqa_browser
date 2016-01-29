@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from vqa_browser.models import URLBase
+from browser.models import URLBase
 
 
 class Command(BaseCommand):

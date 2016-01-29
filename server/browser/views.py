@@ -63,7 +63,7 @@ def index(request):
         return HttpResponse(resp)
 
     resp = ''
-
+    all_imgs = False
     cats = Category.objects.all().order_by('cat_id')
 
     for cat in cats:
@@ -105,11 +105,16 @@ def index(request):
                 .filter(num_cat__gte=len(req_cat)) \
                 .order_by('image')
         else:
-            imgs = Image.objects.all().values('image_id').order_by('image_id')
+            imgs = Image.objects.all().order_by('image_id')
+            all_imgs = True
 
     resp += '</br>Total search results: ' + str(len(imgs)) + '</br>'
     for imgi in imgs[:20]:
-        img = Image.objects.get(image_id=imgi['image'])
+        if all_imgs:
+            img = imgi
+        else:
+            img = Image.objects.get(image_id=imgi['image'])
+        resp += str(img.image_name)  + '</br>' 
         img_str_fmt = '<img src="{}">'
         img_str = img_str_fmt.format(img.get_url())
         resp += img_str + '</br>'
