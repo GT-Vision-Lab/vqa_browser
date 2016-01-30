@@ -79,23 +79,24 @@ def index(request):
                 .filter(num_cat__gte=len(req_cat)) \
                 .values_list('image', flat=True) \
                 .order_by('image')
+            
+            imgs_c = Caption.objects \
+                .filter(image__in=imgs_l, caption__icontains=cap_search) \
+                .order_by('image') \
+                .distinct('image') \
+                .values('image')
+            imgs = imgs_c
         else:
-            imgs_l = Image.objects.all() \
-                .values_list('image', flat=True) \
-                .order_by('image')
-
+            imgs = Caption.objects \
+                .filter(caption__icontains=cap_search) \
+                .order_by('image') \
+                .distinct('image') \
+                .values('image')
 # istartswith
 # iendswith
 # icontains
 # iregex
-        imgs_c = Caption.objects \
-            .filter(image__in=imgs_l, caption__icontains=cap_search) \
-            .order_by('image') \
-            .distinct('image') \
-            .values('image')
-        imgs = imgs_c
     else:
-
         if num_cat > 0:
             imgs = AnnotationCount.objects \
                 .filter(cat_id__in=req_cat) \

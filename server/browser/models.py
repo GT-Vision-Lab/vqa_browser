@@ -19,7 +19,7 @@ class URLBase(models.Model):
 
 class Image(models.Model):
 
-    image_id = models.PositiveIntegerField(db_index=True, primary_key=True)
+    image_id = models.BigIntegerField(db_index=True, primary_key=True)
 
     image_name = models.CharField(db_index=True, max_length=50)
 
@@ -75,7 +75,7 @@ class AnnotationCOCO(models.Model):
 
     image = models.ForeignKey('ImageCOCO', db_index=True)
 
-    ann_id = models.PositiveIntegerField(db_index=True)
+    ann_id = models.BigIntegerField(db_index=True)
 
     cat_id = models.PositiveIntegerField(db_index=True)
 
@@ -105,7 +105,7 @@ class AnnotationAS(models.Model):
 
     image = models.ForeignKey('ImageAS', db_index=True)
 
-    ann_id = models.PositiveIntegerField(db_index=True)
+    ann_id = models.BigIntegerField(db_index=True)
 
     cat_id = models.PositiveIntegerField(db_index=True)
 
@@ -129,7 +129,7 @@ class AnnotationCountAS(models.Model):
 
 class Caption(models.Model):
 
-    cap_id = models.PositiveIntegerField(db_index=True)
+    cap_id = models.BigIntegerField(db_index=True)
 
     caption = models.TextField()
 
@@ -158,11 +158,11 @@ class CaptionAS(Caption):
 
 class Question(models.Model):
 
-    ques_id = models.PositiveIntegerField(db_index=True, primary_key=True)
+    ques_id = models.BigIntegerField(db_index=True, primary_key=True)
 
     question = models.TextField()
 
-    ques_type = models.CharField(db_index=True, max_length=20)
+    ques_type = models.CharField(db_index=True, max_length=60)
 
     ans_type = models.CharField(db_index=True, max_length=20)
 
