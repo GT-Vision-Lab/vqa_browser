@@ -29,11 +29,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         commands = [
-            'images',
-            'annotations',
+#            'images',
+#            'annotations',
             'annotationcounts',
-            'captions',
-            'vqas',
+#            'captions',
+#            'vqas',
         ]
 
         datasets = ['abstract_v002', 'mscoco']
@@ -45,11 +45,15 @@ class Command(BaseCommand):
             'mscoco': ['val2014', 'train2014'],
         }
 
-#        subsets = {
-#                    'abstract_v002': ['val2015'],
-#                    'mscoco': ['val2014'],
-#                  }
+        subsets = {
+                    'abstract_v002': ['val2015'],
+                    'mscoco': ['val2014'],
+                  }
 
+        subsets = {
+                    'abstract_v002': ['train2015'],
+                    'mscoco': ['train2014'],
+                  }
         for dataset in datasets:
             for subset in subsets[dataset]:
                 for command in commands:
@@ -200,10 +204,12 @@ class Command(BaseCommand):
     def calc_obj_ann_counts(self, dataset, subset,
                             Image, Annotation, AnnotationCount):
 
+        img_l = Image.objects.filter(subset=subset).values_list('image_id')
         data = Annotation.objects.values('image', 'cat_id') \
+            .filter(image_id__in=img_l) \
             .annotate(inst_count=Count('image')) \
-            .values('image', 'cat_id', 'inst_count')
-
+            .values('image', 'cat_id', 'inst_count') 
+        
         for datum in data:
             if FORCE: 
                 img_obj = Image.objects.get(image_id=datum['image'])

@@ -17,9 +17,10 @@ Including another URLconf
 from django.http import Http404
 from django.conf.urls import patterns, url
 
-from . import views
+from browser import views
+
 
 urlpatterns = [
-    url(r'^$', views.index, name="index"),
-    #url(r'^(?P<page>.+\.html)$', StaticView.as_view()),
+    url(r'^$', views.index, name='index'),
+    url(r'^categories/$', views.categories, name='categories'),
 ]

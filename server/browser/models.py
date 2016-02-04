@@ -34,7 +34,7 @@ class Image(models.Model):
         return str(self.url_base) + self.image_name
 
     def __str__(self):
-        return str(self.image_id)
+        return str(self.image_name)
 
 
 class ImageCOCO(Image):
