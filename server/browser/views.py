@@ -2,6 +2,7 @@ import logging
 import json
 import random
 from math import ceil
+import time
 
 from django.http import HttpResponse, HttpResponseRedirect
 #from django.views.decorators.clickjacking import xframe_options_exempt
@@ -91,20 +92,79 @@ def index(request):
 def index_get_function(get_data):
 
     if 'req' in get_data:
-        req = index_get_ajax(get_data['req'])
-        resp = json.dumps(req)
-        response = HttpResponse(resp, 
-                                content_type="application/json")
+        req_d = json.loads(get_data['req'])
     else:
-        resp = index_simple(get_data)
-        response = HttpResponse(resp)
+        req_d = {}
+        req_d['dataset'] = 'mscoco'
+        req_d['randSeed'] = -1
+        req_d['maxImgsPerPage'] = 20
+        req_d['curPage'] = 0
+        req_d['showAllDataEachImg'] = False
+        req_d['categoryFilter'] = [1, 82, 90]
+        req_d['searchMethods'] = {'ques': 'icontains', 
+                                  'ans': 'icontains', 
+                                  'cap': 'icontains'}
+        req_d['searchStrs'] = {'ques': '', 
+                               'ans': '', 
+                               'cap': ''}
+        req_d['quesSearchKeep'] = {'binary': True, 
+                                   'number':True, 
+                                   'other': True}
+        req_d['ansSearchKeep'] = {'gt': True, 
+                                  'cs': False}
+        
 
+    req = index_get_ajax(req_d)
+    resp = json.dumps(req)
+    response = HttpResponse(resp, 
+                            content_type="application/json")
+    
     return response
 
-def index_get_ajax(get_data):
-    
-    logger.error(get_data)
-    param = json.loads(get_data)
+
+ans_type_mapping = {'binary': 'yes/no',
+                    'number': 'number',
+                    'other': 'other',
+                    }
+
+ans_search_mapping = {'gt': 'is_ans_img',
+                      'cs': 'is_ans_no_img',
+                    }
+
+def ans_type_list(ques_search_keep):
+
+    ans_types = [ans_type_mapping[t] 
+                for t in ques_search_keep 
+                    if ques_search_keep[t]]
+
+    return ans_types
+
+
+def get_current_page_subset(cur_page, max_per_page, 
+                            data, num_data, 
+                            indices=None):
+
+    num_total_pages = int(ceil(num_data/float(max_per_page)))
+
+    if cur_page < 0:
+        cur_page = 0 
+    elif cur_page >= num_total_pages:
+        cur_page = num_total_pages - 1 
+
+    if indices == None:
+        subset = data[cur_page*max_per_page:(cur_page+1)*max_per_page]
+        page_indices = list(range(cur_page*max_per_page, 
+                                  (cur_page+1)*max_per_page))
+    else:
+        page_indices = \
+            indices[cur_page*max_per_page:(cur_page+1)*max_per_page]
+        subset = map(data.__getitem__, 
+                     page_indices)
+
+    return subset, page_indices, num_total_pages
+
+def index_get_ajax(param):
+
     dataset = param['dataset']
 
     if dataset == 'mscoco':
@@ -136,7 +196,7 @@ def index_get_ajax(get_data):
     cur_page_data = []
 
     resp = {
-        'curPageData': [],
+        'curPageData': cur_page_data,
         'numPages': 0,
         'numSearchImgs': 0,
         'numSearchQs': 0,
@@ -147,314 +207,169 @@ def index_get_ajax(get_data):
         'numTotalAs': 0,
         'numTotalCaps': 0,
     }
- 
+
+    start = time.perf_counter()
+
     if len(ans_types) > 0:
-#        req_cat = [1, 82, 90]
-        iid = object_search(AnnotationCount, req_cat)
 
-        if iid is None or len(iid) > 0:
-            logger.error('question')
+        # Check cached search results here?
 
-            iqid = question_search(Question,
-                                   search_methods['ques'],
-                                   search_strs['ques'],
-                                   ans_types,
-                                   iid)
+        iid, num_iid = object_search(Image,
+                                     AnnotationCount,
+                                     req_cat)
+        total = time.perf_counter() - start
+        logger.error('Object Time: {} s'.format(total))
+        logger.error('{}'.format(num_iid))
 
-            if iqid is None or len(iqid) > 0:
+        if iid is None or num_iid > 0:                
+            icid, num_iid, num_icid = caption_search(Caption,
+                                            search_methods['cap'],
+                                            search_strs['cap'],
+                                            iid,
+                                            num_iid)
+            total = time.perf_counter() - start
+            logger.error('Caption Time: {} s'.format(total))
+            logger.error('{} - {}'.format(num_iid, num_icid))
 
-                logger.error('answer')
-                iqaid = answer_search(Answer,
-                                      search_methods['ans'],
-                                      search_strs['ans'],
-                                      ans_search_keep,
-                                      iqid)
+            if icid is None or num_iid > 0:
+                
+                iid, num_iid_new, num_iqid, num_iqaid = qa_search(Image,
+                                                                Question, 
+                                                                Answer, 
+                                                                search_methods, 
+                                                                search_strs, 
+                                                                ans_types, 
+                                                                ans_search_keep, 
+                                                                icid, 
+                                                                num_iid)
 
-                if iqaid is None or len(iqaid) > 0:
-                    logger.error('caption')
-                    icid = caption_search(Caption,
-                                          search_methods['cap'],
-                                          search_strs['cap'],
-                                          iqaid)
-                   
-                    if icid is None: 
+                total = time.perf_counter() - start
+                logger.error('QA Time: {} s'.format(total))
+                logger.error('{} - {} - {}'.format(num_iid_new, num_iqid, num_iqaid))
+                if num_iid != num_iid_new:
+                    iid, num_iid, num_icid = caption_search(Caption,
+                                                    search_methods['cap'],
+                                                    search_strs['cap'],
+                                                    iid,
+                                                    num_iid_new)
+                    total = time.perf_counter() - start
+                    logger.error('Caption Time: {} s'.format(total))
+                    logger.error('{} - {}'.format(num_iid, num_icid))
+                    
+                if iid is None:
+                    num_all_imgs = Image.objects.all().count()
+                    all_imgs = Image.objects.all() \
+                        .order_by('image_id') \
+                        .values_list('image_id', flat=True)
+                elif num_iid > 0:
+                    num_all_imgs = num_iid
+                    all_imgs = Image.objects \
+                                .filter(image_id__in=iid) \
+                                .order_by('image_id') \
+                                .values_list('image_id', flat=True)
+                else:
+                    num_all_imgs = num_iid
+                    all_imgs = []
 
-                        data = Image.objects.all() \
-                               .order_by('image_id') \
-                               .values_list('image_id', flat=True)
+                # Cache search results here?
 
-                        if rand_seed >= 0:
-                            indices = range(0, len(data))
-                            random.seed(rand_seed)
-                            random.shuffle(indices)
-                        else:
-                            indices = None
+                if rand_seed >= 0:
+                    indices = list(range(0, num_all_imgs))
+                    random.seed(rand_seed)
+                    random.shuffle(indices)
+                else:
+                    indices = None
 
-                        imgs,num_pages = get_current_page_subset(cur_page,
-                                                                 max_imgs_page,
-                                                                 data,
-                                                                 indices=indices)
-                        logger.error(len(imgs))
-                    elif len(icid) > 0:
-                        # Update iid/iqid/iqaid 
-                        # to make sure they're consistent
-                        # with later searches
-                        if not show_all_data:
-                            final_imgs = {d['image'] for d in icid}
-                            final_iqid = []
-                            final_iqaid = []
+                imgs, idxs, num_pages = \
+                    get_current_page_subset(cur_page,
+                                            max_imgs_page,
+                                            all_imgs,
+                                            num_all_imgs,
+                                            indices=indices)
 
-                            for d in iqid:
-                                if d['image'] in final_imgs:
-                                    final_iqid.append(d)
-                            for d in iqaid:
-                                if d['image'] in final_imgs:
-                                    final_iqaid.append(d)
-                            logger.error(len(icid))
-                            logger.error(len(iqaid))
-                            logger.error(len(final_iqaid))
-                            
-                            img2idx = {}
-                            all_imgs = [d['image'] for d in icid]
-                            if rand_seed >= 0:
-                                indices = range(0, len(all_imgs))
-                                random.seed(rand_seed)
-                                random.shuffle(indices)
-                            else:
-                                indices = None
+                final_imgs = Image.objects.filter(image_id__in=imgs)
+                total = time.perf_counter() - start
+                logger.error('Image Time: {} s'.format(total))
+                logger.error(len(final_imgs))
 
-                            imgs, num_pages = get_current_page_subset(cur_page,
-                                                                            max_imgs_page,
-                                                                            all_imgs,
-                                                                            indices=indices)
 
-                    final_imgs = Image.objects.filter(image_id__in=imgs).order_by('image_id')
-
-                    logger.error(final_imgs[0])
+                if not show_all_data:
                     data = []
                     
                     for idx, d in enumerate(final_imgs):
                         img_obj = { 'img': d.image_name,
                                     'imgID': d.image_id,
                                     'url': d.get_url(),
-                                    'uniqueIndex': idx+1,
+                                    'uniqueIndex': idxs[idx]+1,
                                     'questions': [],
                                     'captions': [],
-                                  }
-                        questions = []
-                        qs = Question.objects.filter(image=d).order_by('ques_id')
-                        for q in qs:
-                            a = Answer.objects.get(ques_id=q.ques_id, is_ans_mc_img=True)
-                            mc_ans = json.loads(a.answer)
-                            a = Answer.objects.filter(ques_id=q.ques_id, is_ans_no_img=True)
-                            no_img = [{'ansNum': d.ans_num, 'ansStr': d.answer} for d in a]
-                            a = Answer.objects.filter(ques_id=q.ques_id, is_ans_img=True)
-                            img = [{'ansNum': d.ans_num, 'ansStr': d.answer} for d in a]
-                            
-                            q_obj = { 'quesStr': q.question,
-                                     'quesID': q.ques_id,
-                                      'quesType': q.ques_type,
-                                      'ansType': q.ans_type,
-                                      'ansMCImg': mc_ans,
-                                      'ansImg': img,
-                                      'ansNoImg': no_img,
                                     }
-                            questions.append(q_obj)
-                        img_obj['questions'] = questions
                         
                         caps = Caption.objects.filter(image=d).order_by('cap_id').values('caption', 'cap_id')
-                        caps = [{'caption': c['caption'], 'cap_id':c['cap_id']} for c in caps]
-                        img_obj['captions'] = caps
+                        img_obj['captions'] = [{'caption': c['caption'], 'cap_id':c['cap_id']} for c in caps]
+                        
+                        questions = []
+                        anss = Answer.objects.filter(image=d).order_by('ques_id', 'ans_num')
+                        ques_id_old = -1
+                        for ans in anss:
+                            ques_id = ans.ques_id
+                            if ques_id != ques_id_old:
+                                ques_id_old = ques_id
+                                q = Question.objects.get(ques_id=ques_id)
+                                q_obj = { 'quesStr': q.question,
+                                        'quesID': q.ques_id,
+                                        'quesType': q.ques_type,
+                                        'ansType': q.ans_type,
+                                        'ansMCImg': [],
+                                        'ansImg': [],
+                                        'ansNoImg': [],
+                                    }
+                                questions.append(q_obj)
+                            if ans.is_ans_img:
+                                q_obj['ansImg'].append({'ansNum': ans.ans_num, 'ansStr': ans.answer})
+                            elif ans.is_ans_no_img:
+                                q_obj['ansNoImg'].append({'ansNum': ans.ans_num, 'ansStr': ans.answer})
+                            if ans.is_ans_mc_img == True:
+                                q_obj['ansMCImg'] = json.loads(ans.answer)
+                            
+                        img_obj['questions'] = questions
                         data.append(img_obj)
 
-                    cur_page_data = data
+                total = time.perf_counter() - start
+                logger.error('Build Data Time: {} s'.format(total))
+                cur_page_data = data
 
-                    logger.error(len(cur_page_data))
+                logger.error(len(cur_page_data))
 
-                    resp['curPageData'] = cur_page_data
-                    resp['numPages'] = num_pages
-                    resp['numSearchImgs'] = 1#len(cur_page_data)
-                    resp['numSearchQs'] = 1#len(final_iqid) 
-                    resp['numSearchAs'] = 1#len(final_iqaid)
-                    resp['numSearchCaps'] = 1#len(icid)
-                    resp['numTotalImgs'] = Image.objects.all().count()
-                    resp['numTotalQs'] = Question.objects.all().count()
-                    Qr = Q(is_ans_img=True) | Q(is_ans_no_img=True)
-                    resp['numTotalAs'] = Answer.objects.filter(Qr).count()
-                    resp['numTotalCaps'] = Caption.objects.all().count()
- 
+                resp['curPageData'] = cur_page_data
+                resp['numPages'] = num_pages
+                resp['numSearchImgs'] = num_all_imgs
+                resp['numSearchQs'] = num_iqid
+                resp['numSearchAs'] = num_iqaid
+                resp['numSearchCaps'] = num_icid
+
+                total = time.perf_counter() - start
+                logger.error('Add Response Fields Time: {} s'.format(total))
+    
+    # Cache/load these
+    resp['numTotalImgs'] = Image.objects.all().count()
+    resp['numTotalQs'] = Question.objects.all().count()
+    Qr = Qr_a_s_k = get_ans_gt_qsearch(ans_search_keep)
+    resp['numTotalAs'] = Answer.objects.filter(Qr).count()
+    resp['numTotalCaps'] = Caption.objects.all().count()
+    
+    total = time.perf_counter() - start
+    logger.error('Response Time: {} s'.format(total))
+
     return resp
 
-ans_type_mapping = {'binary': 'yes/no',
-                    'number': 'number',
-                    'other': 'other',
-                    }
-
-ans_search_mapping = {'gt': 'is_ans_img',
-                      'cs': 'is_an_no_img',
-                    }
-
-def get_current_page_subset(cur_page, max_per_page, data, indices=None):
-
-    num_total_pages = int(ceil(len(data)/float(max_per_page)))
-
-    if cur_page < 0:
-        cur_page = 0 
-    elif cur_page >= num_total_pages:
-        cur_page = num_total_pages - 1 
-
-    if indices == None:
-        subset = data[cur_page*max_per_page:(cur_page+1)*max_per_page]
-    else:
-        subset = map(data.__getitem__, 
-                        indices[cur_page*max_per_page:(cur_page+1)*max_per_page])
-
-    return subset, num_total_pages
-
-def caption_search(Caption,
-                                      search_method,
-                                      search_str,
-                                      iqaid):
-# Assumes iqid is None or > 0 elements
-
-    str_search = len(search_str.strip()) != 0
-
-    if str_search:
-        kwargs = {'caption__{}'.format(search_method): search_str}
-        Qr = Q(**kwargs)
-        
-        if iqaid is not None:
-            imgs = [d['image'] for d in iqaid]
-            q = Q(image__in=imgs)
-            Qr = Qr & q
-                
-        icid = Caption.objects.filter(Qr) \
-                .values('image', 'cap_id')
-    else:
-        icid = iqaid
-
-    if icid is not None and len(icid) > 0:
-        logger.error(icid[:5])
-
-    return icid
-
-def answer_search(Answer,
-                                      search_method,
-                                      search_str,
-                                      ans_search_keep,
-                                      iqid):
-# Assumes iqid is None or > 0 elements
-
-    str_search = len(search_str.strip()) != 0
-
-
-    if str_search:
-
-        Qr_sk = None
-        for key, val in ans_search_keep.items():
-            if val:
-                kwargs = {'{}'.format(ans_search_mapping[key]): True}
-                q = Q(**kwargs)
-                if Qr_sk:
-                    # Change the '|' to '&' if want
-                    # search string to be in both
-                    Qr_sk = Qr_sk | q
-                else:
-                    Qr_sk = q
-
-        if Qr_sk:
-            kwargs = {'answer__{}'.format(search_method): search_str}
-            Qr = Q(**kwargs)
-            Qr = Qr & Qr_sk
-            
-            if iqid is not None:
-                d = iqid[0]
-                if 'ques_id' in d:
-                    ques_ids = [d['ques_id'] for d in iqid]
-                    q = Q(ques_id__in=ques_ids)
-                    Qr = Qr & q
-                else:
-                    imgs = iqid
-                    #imgs = [d['image'] for d in iqid]
-                    q = Q(image__in=imgs)
-                    Qr = Qr & q
-                    
-            iqaid = Answer.objects.filter(Qr) \
-                    .values('image', 'ques_id', 'ans_num')
-        else:
-           iqaid = [] 
-            
-    else:
-        iqaid = iqid
-
-    if iqaid is not None and len(iqaid) > 0:
-        logger.error(iqaid[:5])
-
-    return iqaid
-
-def question_search(Question,
-                                   search_method,
-                                   search_str,
-                                   ans_types,
-                                   iid):
-# Assumes ans_types is never empty list
-    
-    str_search = len(search_str.strip()) != 0
-    all_types = len(ans_types) == len(ans_type_mapping)
-
-    all_questions = not str_search and all_types
-
-    if not all_questions:
-        Qr = None
-
-        if iid is not None:
-            q = Q(image__in=iid)
-            if Qr:
-                Qr = Qr & q
-            else:
-                Qr = q
-
-        if not all_types:
-            q = Q(ans_type__in=ans_types)
-            if Qr:
-                Qr = Qr & q
-            else:
-                Qr = q
-
-        if str_search:
-            kwargs = {'question__{}'.format(search_method): search_str}
-            q = Q(**kwargs)
-            if Qr:
-                Qr = Qr & q
-            else:
-                Qr = q
-
-        iqid = Question.objects \
-                .filter(Qr) \
-                .values('image', 'ques_id')
-    else:
-        iqid = iid
-
-    if iqid is not None and len(iqid) > 0:
-        logger.error(iqid[:5])
-
-    return iqid
-
-def ans_type_list(ques_search_keep):
-
-    ans_types = [ans_type_mapping[t] 
-                for t in ques_search_keep 
-                    if ques_search_keep[t]]
-
-    return ans_types
-
-def idx(get_data):
-    pass
-
-def object_search(AnnotationCount, req_cat):
+def object_search(Image,
+                  AnnotationCount, 
+                  req_cat):
 
     if len(req_cat) == 0:
         iid = None
+        num_iid = Image.objects.all().count()
     else:
         iid = AnnotationCount.objects \
               .filter(cat_id__in=req_cat) \
@@ -463,163 +378,179 @@ def object_search(AnnotationCount, req_cat):
               .values('image', 'num_cat') \
               .filter(num_cat__gte=len(req_cat)) \
               .values('image')
+        num_iid = AnnotationCount.objects \
+                  .filter(cat_id__in=req_cat) \
+                  .values('image') \
+                  .annotate(num_cat=Count('image')) \
+                  .values('image', 'num_cat') \
+                  .filter(num_cat__gte=len(req_cat)) \
+                  .count()
 
-    return iid
+    return iid, num_iid
 
-def index_simple(get_data):
+def caption_search(Caption,
+                   search_method,
+                   search_str,
+                   sid,
+                   num_sid):
+# Assumes sid is None or > 0 elements
 
-    qs_dict = get_data
-    num_cat = 0
-    keys = qs_dict.keys()
-    for key in keys:
-        if 'ann' in key:
-            num_cat += 1
-    dataset = 'mscoco'
-
-    if 'dataset' in qs_dict:
-        dataset = qs_dict['dataset']
-        logger.error(str(qs_dict))
-
-    if dataset == 'mscoco':
-        Image = ImageCOCO
-        Category = CategoryCOCO
-        Annotation = AnnotationCOCO
-        AnnotationCount = AnnotationCountCOCO
-        Caption = CaptionCOCO
-        Question = QuestionCOCO
-        Answer = AnswerCOCO
-    elif dataset == 'abstract':
-        Image = ImageAS
-        Category = CategoryAS
-        Annotation = AnnotationAS
-        AnnotationCount = AnnotationCountAS
-        Caption = CaptionAS
-        Question = QuestionAS
-        Answer = AnswerAS
-
-    if 'cap' in qs_dict:
-        cap_search = qs_dict['cap']
-        logger.error(cap_search)
-
-    if num_cat > 0:
-        req_cat = [qs_dict['ann' + str(idx + 1)] for idx in range(0, num_cat)]
+    if sid is not None:
+        Qr = Q(image__in=sid)
     else:
-        req_cat = []
+        Qr = None
+    
+    str_search = len(search_str.strip()) != 0
 
-    len_objs = URLBase.objects.all().count()
-    if len_objs == 0:
-        resp = 'No data yet.'
-        return HttpResponse(resp)
+    if str_search:
+        kwargs = {'caption__{}'.format(search_method): search_str}
+        q = Q(**kwargs)
+        if Qr is not None:
+            Qr = Qr & q
+        else:
+            Qr = q
 
-    resp = ''
-    all_imgs = False
-    cats = Category.objects.all().order_by('cat_id')
-
-    for cat in cats:
-        resp += '{0:03d}: {1},&#09;'.format(cat.cat_id, cat.cat_name)
-    resp += '</br>'
-    if 'cap' in qs_dict:
-        if num_cat > 0:
-            imgs_l = AnnotationCount.objects \
-                .filter(cat_id__in=req_cat) \
+        icid = Caption.objects.filter(Qr) \
+               .values('image') \
+               .distinct()
+        num_iid = Caption.objects.filter(Qr) \
                 .values('image') \
-                .annotate(num_cat=Count('image')) \
-                .values('image', 'num_cat') \
-                .filter(num_cat__gte=len(req_cat)) \
-                .values_list('image', flat=True) \
-                .order_by('image')
-            logger.error(type(imgs_l)) 
-            imgs_c = Caption.objects \
-                .filter(image__in=imgs_l, caption__icontains=cap_search) \
-                .order_by('image') \
-                .distinct('image') \
-                .values('image')
-            logger.error(type(imgs_c))
-            if 'ques' in qs_dict:
-                imgs_d = Question.objects \
-                        .filter(image__in=imgs_c,
-                                question__icontains=qs_dict['ques']) \
-                        .values('image') \
-                        .order_by('image')
-                logger.error(imgs_d)
-                imgs = imgs_d
+                .distinct() \
+                .count()
+        num_icid = Caption.objects.filter(Qr) \
+                  .count()
+    else:
+        icid = sid
+        num_iid = num_sid
+        if Qr is None:
+            num_icid = Caption.objects.all().count()
+        else:
+            num_icid = Caption.objects.filter(Qr).count()
 
-                
-                logger.error(imgs)
+    return icid, num_iid, num_icid
+
+def get_ans_gt_qsearch(ans_search_keep, all_true=False):
+
+    Qr_a_s_k = None
+
+    for key, val in ans_search_keep.items():
+        if val or all_true:
+            kwargs = {'{}'.format(ans_search_mapping[key]): True}
+            q = Q(**kwargs)
+            if Qr_a_s_k:
+                # Change the '|' to '&' if want
+                # search string to be in both
+                Qr_a_s_k = Qr_a_s_k | q
             else:
-                imgs = imgs_c
+                Qr_a_s_k = q
+
+    return Qr_a_s_k
+
+def qa_search(Image,
+                Question, 
+                Answer, 
+                search_methods, 
+                search_strs, 
+                ans_types, 
+                ans_search_keep, 
+                sid, 
+                num_sid):
+# Assumes iqid is None or > 0 elements
+
+    ques_search_str = search_strs['ques']
+    str_ques_search = len(ques_search_str.strip()) != 0
+    
+    ans_search_str = search_strs['ans']
+    str_ans_search = len(ans_search_str.strip()) != 0
+    
+    all_types = len(ans_types) == len(ans_type_mapping)
+
+    all_questions = not str_ques_search and all_types
+
+    Qr_a_s_k = get_ans_gt_qsearch(ans_search_keep)
+
+    if Qr_a_s_k:
+
+        if sid is not None:
+            Qr_img = Q(image__in=sid)
         else:
-            imgs = Caption.objects \
-                .filter(caption__icontains=cap_search) \
-                .order_by('image') \
-                .distinct('image') \
-                .values('image')
-# istartswith
-# iendswith
-# icontains
-# iregex
+            Qr_img = None
+
+        Qr_ans = Qr_a_s_k
+
+        if all_questions and not str_ans_search:
+            if sid is None:
+                num_iid = Image.objects.all().count()
+                num_iqid = Question.objects.all().count()
+                num_iqaid = Answer.objects.filter(Qr_ans) \
+                        .count()
+            else:
+                num_iid = num_sid
+                num_iqid = Question.objects.filter(Qr_img).count()
+                num_iqaid = Answer.objects.filter(Qr_img & Qr_ans) \
+                        .count()
+
+            iqaid = sid
+        else:
+            if str_ans_search:
+                kwargs = {'answer__{}'.format(search_methods['ans']): ans_search_str}
+                q = Q(**kwargs)
+                Qr_ans = Qr_ans & q
+            
+            if all_questions:
+
+                if Qr_img is not None:
+                    Qr_ans = Qr_ans & Qr_img
+
+            else:
+
+                Qr_ques = None
+
+                if Qr_img:
+                    if Qr_ques:
+                        Qr_ques = Qr_ques & Qr_img
+                    else:
+                        Qr_ques = Qr_img
+
+                if not all_types:
+                    q = Q(ans_type__in=ans_types)
+                    if Qr_ques:
+                        Qr_ques = Qr_ques & q
+                    else:
+                        Qr_ques = Qr_img
+
+                if str_ques_search:
+                    kwargs = {'question__{}'.format(search_methods['ques']): ques_search_str}
+                    q = Q(**kwargs)
+                    if Qr_ques:
+                        Qr_ques = Qr_ques & q
+                    else:
+                        Qr_ques = Qr_img
+
+                sid = Question.objects \
+                    .filter(Qr_ques) \
+                    .values('ques_id')
+
+                Qr_ans = Qr_ans & Q(ques_id__in=sid)
+
+            num_iid = iqaid = Answer.objects.filter(Qr_ans) \
+                    .values('image') \
+                    .distinct() \
+                    .count()
+            num_iqid = Answer.objects.filter(Qr_ans) \
+                    .values('ques_id') \
+                    .distinct() \
+                    .count()
+            num_iqaid = Answer.objects.filter(Qr_ans) \
+                    .count()
+            iqaid = Answer.objects.filter(Qr_ans) \
+                    .values('image') \
+                    .distinct()
+
     else:
-        if num_cat > 0:
-            imgs = AnnotationCount.objects \
-                .filter(cat_id__in=req_cat) \
-                .values('image') \
-                .annotate(num_cat=Count('image')) \
-                .values('image', 'num_cat') \
-                .filter(num_cat__gte=len(req_cat)) \
-                .order_by('image')
+        iqaid = []
+        num_iid = 0
+        num_iqid = 0
+        num_iqaid = 0
 
-            d = AnnotationCount.objects \
-                .filter(cat_id__in=req_cat) \
-                .values('image') \
-                .annotate(num_cat=Count('image')) \
-                .values('image', 'num_cat') \
-                .filter(num_cat__gte=len(req_cat)) \
-                .order_by('image_id')
-
-               # .filter(num_cat__gte=len(req_cat)) \
-            img_ls = ''
-            for b in d:
-                img_ls += str(b['image']) + '-' + str(b['num_cat']) + ', '
-                #pass
-            logger.error(img_ls)
-            logger.error(len(d))
-            logger.error(len(req_cat))
-            logger.error(b.keys())
-            logger.error(str(b['image']) + '-'+ str(b['num_cat']))
-        else:
-            imgs = Image.objects.all().order_by('image_id')
-            all_imgs = True
-
-    resp += '</br>Total search results: ' + str(len(imgs)) + '</br>'
-    for imgi in imgs[:20]:
-        if all_imgs:
-            img = imgi
-        else:
-            img = Image.objects.get(image_id=imgi['image'])
-        resp += str(img.image_name)  + '</br>' 
-        img_str_fmt = '<img src="{}">'
-        img_str = img_str_fmt.format(img.get_url())
-        resp += img_str + '</br>'
-        caps = Caption.objects.filter(image=img)
-        for cap in caps:
-            resp += str(cap.caption) + '</br>'
-        resp += '</br>'
-        quess = Question.objects.filter(image=img)
-        for ques in quess:
-            resp += '<b>' + str(ques.question) + '</b></br>'
-            resp += 'Answers: '
-            anss = Answer.objects.filter(ques=ques, is_ans_img=True)
-            for ans in anss:
-                resp += str(ans.answer) + ', '
-            resp += '</br></br>'
-            resp += 'Commonsense answers: '
-            anss = Answer.objects.filter(ques=ques, is_ans_no_img=True)
-            for ans in anss:
-                resp += str(ans.answer) + ', '
-            resp += '</br></br>'
-            anss = Answer.objects.filter(ques=ques, is_ans_mc_img=True)
-            resp += 'Multiple-choice options: '
-            for ans in anss:
-                resp += str(ans.answer) + ', '
-            resp += '</br></br>'
-    return resp
+    return iqaid, num_iid, num_iqid, num_iqaid
