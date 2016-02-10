@@ -17,11 +17,16 @@ django:
     expose:
         - 8000
     links:
+        - redis
         - postgres
     volumes:
         - .:$dock_share
         - $ann_dir:/opt/browser_data
     working_dir: $dock_share/server
+
+# redis memory cache/db                                                                                          
+redis:                                                                                                     
+    image: redis:latest
 
 # postgres database
 # Changing db_dir might break things

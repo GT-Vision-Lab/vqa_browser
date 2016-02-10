@@ -1,3 +1,3 @@
 #!/bin/sh
 
-docker-compose rm django nginx postgres
+docker-compose rm django nginx postgres redis

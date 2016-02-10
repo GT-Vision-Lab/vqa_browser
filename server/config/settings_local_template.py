@@ -46,3 +46,9 @@ DOCKER_DIR = '/docker_share'
 
 # What the db hostname will be in containers
 DOCKER_DB_HOST = 'db'
+
+# Port that Redis server is open on
+# Currently, set to default,
+# changing might require update
+# to docker-compose file.
+REDIS_PORT = 6379

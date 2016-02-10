@@ -7,6 +7,9 @@ django
 # For the persistance stores
 psycopg2
 
+# For search caching
+redis
+
 gunicorn
 
 # Python3 compatible boto (with AMT support)
