@@ -32,6 +32,7 @@ def generic_request_handler(request, data_get_process, data_post_process):
     resp = 'Default response.'
 
     if request.method == 'GET':
+        logger.error(request.GET)
         response = data_get_process(request.GET)  
     elif request.method == 'POST':
         post_data = json.loads(request.POST['resp'])

@@ -81,7 +81,8 @@ var data_view_str = "All Data is On: "
 var all_imgs_head_str =  "All Data Has: ";
 var all_imgs_on_str = "Images Shown";
 
-var executing_search_str = "</br></br>Loading...</br>";
+var executing_search_str = "</br></br>Searching...</br>";
+var failed_search_str = "</br></br>Server Error. :(</br>";
 
 var show_img_btn_str = "Show Image";
 
@@ -273,6 +274,7 @@ function ajax_get_categories() {
     } else {
         $.ajax({
             url: category_url,
+            timeout: 60000,
             type: 'GET',
             data: {'dataset': dataset},
             success: function(data) {
@@ -282,10 +284,12 @@ function ajax_get_categories() {
                     },
             failure: function(data) { 
                         console.log('Server error.');
+                        set_search_stats('failed');
                     },
             error: function ( jqXHR, textStatus, errorThrown) {
                         console.log("errorThrown: " 
                             + errorThrown + " textStatus:" + textStatus);
+                            set_search_stats('failed');
                     }
         })
     }
@@ -335,6 +339,7 @@ function ajax_db_search(get_request) {
 
     $.ajax({
         url: browser_url,
+        timeout: 600000,
         type: 'GET',
         data: {'req': JSON.stringify(get_request)},
         success: function(data) {
@@ -342,10 +347,12 @@ function ajax_db_search(get_request) {
                   },
         failure: function(data) { 
                     console.log('Server error.');
+                    set_search_stats('failed');
                   },
          error: function ( jqXHR, textStatus, errorThrown) {
                     console.log("errorThrown: " + errorThrown 
                     + " textStatus:" + textStatus);
+                    set_search_stats('failed');
                   }
     })
 
@@ -1367,6 +1374,11 @@ function set_search_stats(status) {
     if (status == 'searching') {
         vals.style("display", "none");
         load.style("display", stats_display['load']);
+        load.html(executing_search_str);
+    } else if (status == 'failed') {
+        vals.style("display", "none");
+        load.style("display", stats_display['load']);
+        load.html(failed_search_str);
     } else {
         vals.style("display", stats_display['vals']);
         load.style("display", "none");
@@ -2091,10 +2103,12 @@ function clear_redis() {
                   },
         failure: function(data) { 
                     console.log('Server error.');
+                    set_search_stats('failed');
                   },
          error: function ( jqXHR, textStatus, errorThrown) {
                     console.log("errorThrown: " 
                     + errorThrown + " textStatus:" + textStatus);
+                    set_search_stats('failed');
                   }
     })
 }
