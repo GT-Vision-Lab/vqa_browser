@@ -1,0 +1,119 @@
+* {
+    font-family: 'Inconsolata';
+}
+
+body {
+    padding-top: 0;
+    padding-bottom: 0;
+    padding: 0;
+    margin: 0;
+    min-width: 1105px;
+}
+
+.title {
+    font-size: 32pt;
+}
+
+.oneImgRow {
+    margin-bottom: 5px;
+    border-top: 5px solid;
+}
+
+.oneDashedRow {
+    margin-bottom: 5px;
+    border-top: 5px dashed;
+}
+
+.searchStats {
+    font-size: 11pt;
+/*     margin-bottom: 10px; */
+}
+
+.image {
+    cursor: pointer;
+}
+
+.querySearchDiv {
+    font-size: 11pt;
+    font-weight: 600;
+}
+
+.pageNumDiv {
+    font-size: 11pt;
+    font-weight: 600;
+}
+
+.imgHeading {
+    font-size: 11pt;
+    font-weight: 600;
+}
+
+.question {
+    font-size: 11pt;
+    font-weight: 600;
+}
+
+.answerHeading {
+    font-size: 10pt;
+    font-weight: 550;
+}
+
+.answerData {
+    font-size: 11pt;
+    font-weight: 550;
+/*    border-style: solid;
+    border-size: 2px;*/
+    overflow: hidden;
+/*    height: 150px;*/
+}
+
+.answerMCData {
+    font-size: 11pt;
+    font-weight: 550;
+}
+
+.header {
+    background-color: #680303;
+    padding: 20px 0;
+    position: relative;
+    top: 0;
+    margin-top: -75px;
+}
+
+.header img {
+    position: absolute;
+    top: 4px;
+    right: 10px;
+}
+
+.header h1 {
+    color: #FFF;
+    font-weight: 200;
+    font-family: 'Source Sans Pro',sans-serif;
+    font-size: 32px;
+    margin-left: 20px;
+}
+
+.header h1 a {
+    color: #fff;
+    text-decoration: none;
+    line-height: inherit;
+}
+
+.binBtn {
+    background-color: #E3DFDC;
+    cursor: pointer;
+    border-radius: 10px;
+    border-style: solid;
+    border-color: black;
+    border-width: 3px;
+    font-size: 11pt;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.binBtnOn {
+    background-color: #680303;
+    border-color: black;
+    color: white;
+}

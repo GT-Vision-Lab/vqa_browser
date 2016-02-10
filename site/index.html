@@ -1,0 +1,2104 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--><html class="no-js"><!--<![endif]-->
+
+<head>
+    <meta charset="utf-8">
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
+    <meta content="" name="description">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+
+    <title>VQA: Visual Question Answering</title>
+    <link href='http://fonts.googleapis.com/css?family=Inconsolata' rel=
+    'stylesheet' type='text/css'>
+    <!--   <link href='./static/css/Inconsolata.css' rel='stylesheet' 
+                 type='text/css'> -->
+    <link href="./static/css/bootstrap.min.css" rel="stylesheet" 
+          type="text/css">
+    <link href="./static/css/vqa.css" rel="stylesheet" type="text/css">
+    <link href="./static/css/foundation.css" rel="stylesheet" type="text/css">
+    <link href="./static/css/main.css" rel="stylesheet" type="text/css">
+
+    <script src="./static/js/vendor/modernizr-2.6.2-respond-1.1.0.min.js" 
+            type="text/javascript">
+    </script>
+    <script src="./static/js/vendor/jquery-1.11.1.min.js" 
+            type="text/javascript">
+    </script>
+    <script src="./static/js/vendor/bootstrap.min.js" type="text/javascript">
+    </script>
+    <script src="./static/js/vendor/d3.min.js" type="text/javascript">
+    </script>
+</head>
+
+<body>
+    <header>
+        <div class="row">
+            <a href="http://visualqa.org/"><img alt="VQA logo" src=
+            "./static/img/main.png" style=
+            "height: 100px; position:absolute; top:4px; left:0px;"></a>
+
+            <h1><img alt="Organization logos" src="./static/img/logo.png" 
+                     style="height: 100px;"><br>
+            </h1>
+            <br>
+        </div>
+    </header>
+    
+    <script>
+
+var category_url = 
+    'http://marr.ece.vt.edu:8081/vqa_browser/categories/';
+
+var browser_url = 
+    'http://marr.ece.vt.edu:8081/vqa_browser/';
+
+    
+var dataset_head_str = "Dataset: ";
+var dataset_ord_str = "Image Order: ";
+var fixed_ord_str = "Fixed";
+var rand_ord_str = "Random";
+var each_img_data_str = "For Each Filtered Image, Show: ";
+var filtered_str = "Only Filtered";
+var all_data_str = "All Data";
+
+var cont_str = 'Contains String';
+var start_str = 'Starting String';
+var end_str = 'Ending String';
+var regex_str = '(ARE) Regex';
+
+var q_binary_str = "Show Binary Questions";
+var q_number_str = "Show Number Questions";
+var q_other_str = "Show Other Questions";
+var a_gt_str = "Search GT Answers";
+var a_cs_str = "Search CS Answers";
+
+var ann_obj_str = 'Required Objects:';
+
+var data_view_str = "All Data is On: "
+var all_imgs_head_str =  "All Data Has: ";
+var all_imgs_on_str = "Images Shown";
+
+var executing_search_str = "</br></br>Loading...</br>";
+
+var show_img_btn_str = "Show Image";
+
+var STATS_DECIMALS = 3;
+
+var search_prompt_strs = {
+    'ques': 'Question Search: ',
+    'ans': 'Answer Search: ',
+    'cap': 'Caption Search: ',
+}
+
+var avail_views = ['oe', 'mc', 'gt', 'cs', 'cap']
+var view_strs = { 'oe': 'Open-Ended',
+                  'mc': 'Multiple-Choice',
+                  'gt': 'Ground-Truth',
+                  'cs': 'Common-Sense',
+                  'cap': 'Captions',
+                }
+var view_functions = { 'oe': create_oe_div,
+                       'mc': create_mc_div,
+                       'gt': create_gt_div,
+                       'cs': create_cs_div,
+                       'cap': create_cap_div,
+                     }
+var data_on_which_view = avail_views[0];
+
+// Present data in random order (on image-level)
+var randomize_data = false; // Init with opposite
+
+var all_imgs_on = true;
+
+// If using filtering, should all data of an image be displayed
+// for it if it meets the search criteria
+var show_all_data_each_img = false;
+
+var randomize_mc = false;
+//https://docs.djangoproject.com/en/1.9/ref/models/querysets/#id4
+// Case insensitive ones
+// Do not change these names, will make back-end fail.
+var DEFAULT_SEARCH_MTD_IDX = 0;
+var avail_search_methods = ['icontains', 'istartswith', 'iendswith', 'iregex'];
+var num_search_methods = avail_search_methods.length;
+
+var imgs_per_page = 20;
+var page_button_count = 1;
+var SEED_MIN = 0;
+var SEED_MAX = 1000;
+var rand_seed = -1;
+
+var json_data_pages = [];
+var dataset = 'mscoco';
+var dataset_names = {
+    'mscoco': 'MSCOCO',
+    'abstract': 'Abstract',
+}
+
+var dataset_categories = {
+    'mscoco': [],
+    'abstract': []
+}
+
+var ques_search_keep = {
+    'binary': true,
+    'number': true,
+    'other': true,
+}
+
+var ans_search_keep = {
+    'gta': true,
+    'csa': false,
+}
+
+var MENU_TOP = 'top';
+var MENU_BOT = 'bottom';
+var menu_display = { MENU_TOP: '',
+                     MENU_BOT: '',
+                     };
+// Fewest results for bottom (duplicate)
+// search menu to appear
+var MIN_FOR_BOT_MENU = 5;
+
+
+var stats_display = { 'vals': '',
+                      'load': '',
+                    }
+
+var search_strs = {
+    'ques': '',
+    'ans': '',
+    'cap': '',
+}
+
+var search_methods = {
+    'ques': '',
+    'ans': '',
+    'cap': '',
+}
+
+var page_count_str = '';
+var cur_page = 0;
+var num_pages = 0;
+var num_search_imgs = 0;
+var num_search_qs = 0;
+var num_search_as = 0;
+var num_search_caps = 0;
+var num_total_imgs = 0;
+var num_total_qs = 0;
+var num_total_as = 0;
+var num_total_caps = 0;
+var flush_data = false;
+
+var categories;
+
+var top_k_ans = [];
+
+var mc_prefix = ['a', 'b', 'c', 'd',
+                'e', 'f', 'g', 'h',
+                'i', 'j', 'k', 'l',
+                'm', 'n', 'o', 'p',
+                'q', 'r', 's', 't', 'u', 'v', 'w'
+                ];
+
+var gt_prefix = ['1', '2', '3', '4',
+                '5', '6', '7', '8',
+                '9', '10', '11', '12',
+                '13', '14', '15', '16',
+                '17', '18'
+                ];
+
+var answers_mc_per_div;
+var answers_mc_per_div_col_size;
+var answers_gt_per_divs;
+var answers_gt_per_div_col_size;
+
+answers_gt_per_div = [5, 5, 5, 5, 5];
+answers_gt_per_div_col_size = [5, 5, 5, 5, 5];
+
+answers_cs_per_div = [9, 9, 5, 5, 5];
+answers_cs_per_div_col_size = [7, 7, 5, 5, 5];
+
+if (randomize_mc) {
+    answers_mc_per_div = [5, 5, 5, 5];
+    answers_mc_per_div_col_size = [3, 3, 3, 3];
+} else {
+    answers_mc_per_div = [9, 9, 9, 9, 9, 9];
+    answers_mc_per_div_col_size = [6, 6, 5, 5, 5, 5];
+}
+
+init()
+
+function init() {
+    
+    ajax_get_categories();
+
+    toggle_random();
+
+    body = d3.select("body").html("");
+
+    cont = body
+    .append("div")
+    .attr("class", "off-canvas hide-extras")
+
+    create_header(cont);
+    
+    page_button_count = 1;
+    create_menu(cont, MENU_TOP);
+
+    cont
+    .append("div")
+    .attr("class", "results")
+    .attr("id", "results")
+
+    cont
+    .append("div")
+    .attr("class", "row oneImgRow")
+    .style("margin-bottom", "15px")
+
+    create_menu(cont, MENU_BOT);
+    update_menu_visibility(MENU_BOT);
+
+    execute_search('initialize');
+}
+
+function ajax_get_categories() {
+    
+    if (dataset_categories[dataset].length > 0) {
+        categories = dataset_categories[dataset];
+        return;
+    } else {
+        $.ajax({
+            url: category_url,
+            type: 'GET',
+            data: {'dataset': dataset},
+            success: function(data) {
+                        dataset_categories[dataset] = data;
+                        categories = data;
+                        add_categories();
+                    },
+            failure: function(data) { 
+                        console.log('Server error.');
+                    },
+            error: function ( jqXHR, textStatus, errorThrown) {
+                        console.log("errorThrown: " 
+                            + errorThrown + " textStatus:" + textStatus);
+                    }
+        })
+    }
+
+}
+
+function add_categories() {
+
+    var cont;
+
+    cont = d3.selectAll("#categories");
+    // Wait for both to be added to not duplicate data
+    if (cont[0].length == 2) {
+        cont.selectAll("div.cat").remove();
+
+        cont.selectAll("div.cat")
+        .data(categories)
+        .enter()
+        .append("div")
+        .attr("class", function(d) {return "binBtn text-center cat cat"+d.id;})
+        .attr("style", "width: 9%; display:inline-block; "
+                        + "margin:1px; font-size:10pt; border-width:2px;")
+        .attr("onselectstart", "return false")
+        .on("click", toggle_category)
+        .html( function(d) { return d.name;})
+    }
+
+}
+
+function toggle_category(category) {
+
+    flush_data = true;
+
+    cat = d3.selectAll('.cat' + category.id);
+
+    if (category.filter) {
+        category.filter = false;
+        cat.classed("binBtnOn", false);
+    } else {
+        category.filter = true;
+        cat.classed("binBtnOn", true);
+    }
+
+}
+
+function ajax_db_search(get_request) {
+
+    $.ajax({
+        url: browser_url,
+        type: 'GET',
+        data: {'req': JSON.stringify(get_request)},
+        success: function(data) {
+                    process_ajax_data(data);
+                  },
+        failure: function(data) { 
+                    console.log('Server error.');
+                  },
+         error: function ( jqXHR, textStatus, errorThrown) {
+                    console.log("errorThrown: " + errorThrown 
+                    + " textStatus:" + textStatus);
+                  }
+    })
+
+}
+
+// Gets called when call to server finishes
+function process_ajax_data(data) {
+
+    num_search_imgs = data['numSearchImgs'];
+    num_search_qs = data['numSearchQs'];
+    num_search_as = data['numSearchAs'];
+    num_search_caps = data['numSearchCaps'];
+    num_total_imgs = data['numTotalImgs'];
+    num_total_qs = data['numTotalQs'];
+    num_total_as = data['numTotalAs'];
+    num_total_caps = data['numTotalCaps'];
+    
+
+    cur_page = data['curPage'];
+    num_pages = data['numPages'];
+    if (num_pages == 0) {
+        cur_page = -1;
+    }
+
+    if (json_data_pages == undefined) {
+        json_data_pages = Array(num_pages)
+    } else if (json_data_pages.length != num_pages) {
+        json_data_pages= Array(num_pages)
+    }
+    
+    json_data_pages[cur_page] = data['curPageData'];
+    
+    update_search_stats(num_search_imgs, 
+                        num_total_imgs, 
+                        num_search_qs, 
+                        num_total_qs,
+                        num_search_as, 
+                        num_total_as,
+                        num_search_caps, 
+                        num_total_caps);
+    update_page_info(cur_page, num_pages);
+    render_results(json_data_pages[cur_page]);
+
+}
+
+function create_get_request(imgs_per_page,
+                            show_all_data_each_img,
+                            rand_seed,
+                            cur_page,
+                            dataset,
+                            search_methods,
+                            search_strs,
+                            ques_search_keep,
+                            ans_search_keep,
+                            category_list) {
+
+    get_request = { 
+        'maxImgsPerPage': imgs_per_page,
+        'showAllDataEachImg': show_all_data_each_img,
+        'randSeed': rand_seed,
+        'curPage': cur_page,
+        'dataset': dataset,
+        'searchMethods': search_methods,
+        'searchStrs': search_strs,
+        'quesSearchKeep': ques_search_keep,
+        'ansSearchKeep': ans_search_keep,
+        'categoryFilter': category_list,
+    };
+    
+    return get_request;
+
+}
+
+function update_search_stats(num_search_imgs, 
+                             num_total_imgs, 
+                             num_search_qs, 
+                             num_total_qs,
+                             num_search_as, 
+                             num_total_as,
+                             num_search_caps, 
+                             num_total_caps) {
+
+    perc_imgs = (100*num_search_imgs/num_total_imgs);
+    perc_qs = (100*num_search_qs/num_total_qs);
+    perc_as = (100*num_search_as/num_total_as);
+    perc_caps = (100*num_search_caps/num_total_caps);
+    
+    numSpan = d3.selectAll("span.numSearchImgs");
+    numSpan.property("innerHTML", num_search_imgs.toString());
+    
+    numSpan = d3.selectAll("span.numTotalImgs");
+    numSpan.property("innerHTML", num_total_imgs.toString());
+    
+    numSpan = d3.selectAll("span.percImgs");
+    numSpan.property("innerHTML", perc_imgs.toFixed(STATS_DECIMALS));
+    
+    numSpan = d3.selectAll("span.numSearchQs");
+    numSpan.property("innerHTML", num_search_qs.toString());
+    
+    numSpan = d3.selectAll("span.numTotalQs");
+    numSpan.property("innerHTML", num_total_qs.toString());
+    
+    numSpan = d3.selectAll("span.percQs");
+    numSpan.property("innerHTML", perc_qs.toFixed(STATS_DECIMALS));
+    
+    numSpan = d3.selectAll("span.numSearchAs");
+    numSpan.property("innerHTML", num_search_as.toString());
+    
+    numSpan = d3.selectAll("span.numTotalAs");
+    numSpan.property("innerHTML", num_total_as.toString());
+    
+    numSpan = d3.selectAll("span.percAs");
+    numSpan.property("innerHTML", perc_as.toFixed(STATS_DECIMALS));
+    
+    numSpan = d3.selectAll("span.numSearchCaps");
+    numSpan.property("innerHTML", num_search_caps.toString());
+    
+    numSpan = d3.selectAll("span.numTotalCaps");
+    numSpan.property("innerHTML", num_total_caps.toString());
+    
+    numSpan = d3.selectAll("span.percCaps");
+    numSpan.property("innerHTML", perc_caps.toFixed(STATS_DECIMALS));
+
+}
+
+function update_page_info(cur_page, num_pages) {
+
+    page_input = d3.selectAll("input.pageNumSpan");
+    page_input.property("value", (cur_page+1).toString());
+        
+    numPagesSpan = d3.selectAll("span.numPages");
+    numPagesSpan.property("innerHTML", num_pages.toString());
+
+}
+
+function toggle_dataset() {
+
+    flush_data = true;
+    
+    if (dataset == 'mscoco') {
+        dataset = 'abstract';
+    } else {
+        dataset = 'mscoco';
+    }
+
+    update_dataset_button(dataset);
+
+    if (dataset_categories[dataset].length > 0) {
+        categories = dataset_categories[dataset];
+        add_categories();
+    } else {
+        ajax_get_categories();
+    }
+    
+}
+
+function update_dataset_button(dataset) {
+
+    mscoco = d3.selectAll('.mscoco-ds');
+    abs = d3.selectAll('.abstract-ds');
+
+    if (dataset == 'mscoco') {
+        mscoco.classed("binBtnOn", true);
+        abs.classed("binBtnOn", false);
+    } else {
+        mscoco.classed("binBtnOn", false);
+        abs.classed("binBtnOn", true);
+    }        
+
+}
+        
+function toggle_random() {
+
+    flush_data = true;
+    
+    if (randomize_data) {
+        randomize_data = false;
+        rand_seed = -1;
+    } else {
+        randomize_data = true;
+        rand_seed = Math.floor(Math.random()*(SEED_MAX-SEED_MIN+1))
+        rand_seed += SEED_MIN;
+    }
+
+    update_random_button(randomize_data);
+
+}
+        
+function update_random_button(randomize) {
+
+    fix = d3.selectAll('.fixedOrder');
+    rand = d3.selectAll('.randomOrder');
+
+    if (randomize) {
+        rand.classed("binBtnOn", true);
+        fix.classed("binBtnOn", false);
+    } else {
+        rand.classed("binBtnOn", false);
+        fix.classed("binBtnOn", true);
+    }
+
+}
+        
+function toggle_data_each_img() {
+
+    flush_data = true;
+
+    if (show_all_data_each_img) {
+        show_all_data_each_img = false;
+    } else {
+        show_all_data_each_img = true;
+    }
+
+    update_data_each_img_button(show_all_data_each_img);
+
+}
+        
+function update_data_each_img_button(show_all_data_each_img) {
+
+    fix = d3.selectAll('.filterData');
+    rand = d3.selectAll('.allData');
+    
+    if (show_all_data_each_img) {
+        rand.classed("binBtnOn", true);
+        fix.classed("binBtnOn", false);
+    } else {
+        rand.classed("binBtnOn", false);
+        fix.classed("binBtnOn", true);
+    }
+
+}
+        
+function toggle_search_keep(search_keep, type) {
+
+    flush_data = true;
+
+    if (search_keep[type]) {
+        search_keep[type] = false;
+    } else {
+        search_keep[type] = true;
+    }
+    update_search_keep_button(search_keep);
+
+}
+        
+function update_search_keep_button(search_keep) {
+
+    for (var type in search_keep) {
+        if (search_keep.hasOwnProperty(type)) {
+            cur_class = '.btn-' + type;
+            cur_div = d3.selectAll(cur_class);
+
+            if (search_keep[type]) {
+                cur_div.classed("binBtnOn", true);
+            } else {
+                cur_div.classed("binBtnOn", false);
+            }
+        }
+    }
+
+}
+
+function select_search_method(type, button) {
+
+    flush_data = true;
+
+    if (search_methods[type] != button) {
+        search_methods[type] = button;
+    }
+
+    update_search_method(search_methods, type);
+
+}
+        
+function update_search_method(search_methods, type) {
+
+    for (var idx = 0; idx < num_search_methods; idx++) {
+        d3.selectAll("." + type + "-" 
+                    + avail_search_methods[idx])
+            .classed("binBtnOn", false);
+    }
+    
+    d3.selectAll("." + type + "-" 
+                + search_methods[type])
+        .classed("binBtnOn", true);
+
+}
+
+function toggle_data_view(view_to_set) {
+
+    data_on_which_view = view_to_set;
+
+    if (view_to_set == 'cs') {
+        all_imgs_on = true;
+    } else {
+        all_imgs_on = false;
+    }
+
+    toggle_img_show_all();
+
+    update_data_view_button(data_on_which_view);
+
+    update_data_view();
+
+}
+
+function update_data_view_button(data_on_which_view) {
+
+    for (var idx = 0; idx < avail_views.length; idx++) {
+        cur_div = d3.selectAll('.btn-view-' + avail_views[idx])
+        if (avail_views[idx] == data_on_which_view) {
+            cur_div.classed("binBtnOn", true);
+        } else {
+            cur_div.classed("binBtnOn", false);
+        }
+    }
+
+}
+
+function update_data_view() {
+
+    for (var idx = 0; idx < avail_views.length; idx++) {
+        cur_method = avail_views[idx];
+        
+        cur_div = d3.selectAll('.data-' + cur_method)
+        cur_div_btn = d3.selectAll('.btn-' + cur_method)
+        if (cur_method == data_on_which_view) {
+            cur_div.style("display", "");
+            cur_div_btn.classed("binBtnOn", true);
+        } else {
+            cur_div.style("display", "none");
+            cur_div_btn.classed("binBtnOn", false);
+        }
+    }
+
+}
+
+function toggle_img_show_all() {
+
+    if (all_imgs_on) {
+        all_imgs_on = false;
+    } else {
+        all_imgs_on = true;
+    }
+
+    update_img_show_all_button(all_imgs_on);
+    update_img_show_all(all_imgs_on);
+
+}
+        
+function update_img_show_all_button(all_imgs_on) {
+
+    cur_div = d3.selectAll('.showAllImgs');
+
+    if (all_imgs_on) {
+        cur_div.classed("binBtnOn", true);
+    } else {
+        cur_div.classed("binBtnOn", false);
+    }
+
+}
+
+function update_img_show_all(all_imgs_on) {
+
+    di = d3.selectAll("div.image");
+    dd = d3.selectAll("div.btn-img");
+
+    if (all_imgs_on) {
+        di.style("opacity", 1);
+        dd.classed("binBtnOn", true);
+    } else {
+        di.style("opacity", 0);
+        dd.classed("binBtnOn", false);
+    }
+
+}
+
+function search_key_press(e, type, num) {
+
+    cur_input = d3.select("input." + type + "SStr" + num);
+
+    // store current positions in variables
+    var start = cur_input.property('selectionStart');
+    var end = cur_input.property('selectionEnd');
+    
+    selected_input = cur_input.property("value");
+    page_input = d3.selectAll("input." + type + "SearchSpan");
+    page_input.property("value", selected_input);
+
+    // restore cursor from variables
+    cur_input.property('selectionStart', start);
+    cur_input.property('selectionEnd', end);
+    
+    search_strs[type] = selected_input;
+
+    // look for window.event in case event isn't passed in
+    e = e || window.event;
+
+    if (e.keyCode == 13) {
+        execute_search('search_str');
+    }
+
+}
+
+function page_key_press(e, num) {
+
+    selected_input = d3.select("input.pageNumSpan.pNS" + num);
+
+    // store current positions in variables
+    var start = selected_input.property('selectionStart');
+    var end = selected_input.property('selectionEnd');
+
+    // look for window.event in case event isn't passed in
+    e = e || window.event;
+    if (e.keyCode == 13) {
+        
+        new_input = selected_input.property("value") - 2;
+        if (!isNaN(new_input)) {
+            cur_page = new_input;
+            next_page();
+        } else {
+            cur_page -= 1;
+            next_page();
+        }
+    } else {
+        // Updates both menu boxes with newly typed value
+        selected_input = d3.select("input.pageNumSpan.pNS" + num);
+        page_input = d3.selectAll("input.pageNumSpan")
+        page_input.property("value", selected_input.property("value"));
+    }
+    
+    // restore cursor from variables
+    selected_input.property('selectionStart', start);
+    selected_input.property('selectionEnd', end);
+
+}
+
+function prev_page() {
+
+    if (flush_data) {
+        json_data_pages = [];
+        flush_data = false;
+    }
+
+    cur_page -= 1;
+    if (cur_page < 0) {
+        cur_page = 0;
+    } else if (cur_page >= num_pages && num_pages>0 ) {
+        cur_page = num_pages-1;
+    } else if (num_pages == 0) {
+        cur_page += 1;
+    }
+
+    page_input = d3.selectAll("input.pageNumSpan")
+    page_input.property("value", (cur_page+1).toString());
+
+    if (json_data_pages[cur_page] == undefined) {
+        execute_search('page');
+    } else {
+        render_results(json_data_pages[cur_page]);
+    }
+}
+
+function next_page() {
+
+    if (flush_data) {
+        json_data_pages = [];
+        flush_data = false;
+    }
+
+    cur_page += 1;
+    if (cur_page < 0) {
+        cur_page = 0;
+    } else if (cur_page >= num_pages && num_pages > 0) {
+        cur_page = num_pages-1;
+    } else if (num_pages == 0) {
+        cur_page -= 1;
+    }
+
+    page_input = d3.selectAll("input.pageNumSpan")
+    page_input.property("value", (cur_page+1).toString());
+
+    if (json_data_pages[cur_page] == undefined) {
+        execute_search('page');
+    } else {
+        render_results(json_data_pages[cur_page]);
+    }
+}
+        
+function execute_search(origin) {
+
+    if (flush_data) {
+        json_data_pages = [];
+        flush_data = false;
+    }
+
+    if (origin != 'page') {
+        cur_page = 0;
+        num_search_imgs = 0;
+        num_search_qs = 0;
+        num_search_as = 0;
+        num_search_caps = 0;
+        num_total_imgs = 0;
+        num_total_qs = 0;
+        num_total_as = 0;
+        num_total_caps = 0;
+
+        update_search_stats(num_search_imgs,
+                            num_total_imgs,
+                            num_search_qs,
+                            num_total_qs,
+                            num_search_as,
+                            num_total_as,
+                            num_search_caps,
+                            num_total_caps);
+        update_page_info(cur_page, num_pages);
+    }
+
+    obj_filter = []
+    if (categories != undefined) {
+        for (var i = 0; i < categories.length; i++) {
+            if (categories[i].filter) {
+                obj_filter.push(categories[i].id);
+            }
+        }
+    }
+
+    get_request = create_get_request(imgs_per_page,
+                                        show_all_data_each_img,
+                                        rand_seed,
+                                        cur_page,
+                                        dataset,
+                                        search_methods,
+                                        search_strs,
+                                        ques_search_keep,
+                                        ans_search_keep,
+                                        obj_filter);
+
+    set_search_stats('searching');
+    ajax_get_categories();
+    ajax_db_search(get_request);
+
+}
+
+function create_menu(cont, menu_type) {
+
+    menu_id = "menu_" + menu_type;
+    menu = cont
+    .append("div")
+    .attr("style", "margin-top:15px;")
+    .attr("id", menu_id)
+
+    param_menu = menu
+//                 .append("div")
+//                 .attr("class", "col-xs-7")
+
+    submenu = param_menu
+        .append("div")
+        .attr("class", "generalSub")
+
+    row = submenu
+        .append("div")
+        .attr("class", "row")
+
+    subrow = row
+        .append("div")
+        .attr("class", "col-xs-4 col-xs-offset")
+
+    subrow
+        .append("div")
+        .attr("class", "col-xs-12 text-center dataset")
+        .attr("onselectstart", "return false")
+        .html(dataset_head_str)
+
+    subrow
+        .append("div")
+        .attr("class", "col-xs-6 text-center binBtn dataset mscoco-ds")
+        .attr("onselectstart", "return false")
+        .on("click", toggle_dataset)
+        .html(dataset_names['mscoco'])
+
+    subrow
+        .append("div")
+        .attr("class", "col-xs-6 text-center binBtn dataset abstract-ds")
+        .attr("onselectstart", "return false")
+        .on("click", toggle_dataset)
+        .html(dataset_names['abstract'])
+
+    update_dataset_button(dataset);
+
+    subrow = row
+        .append("div")
+        .attr("class", "col-xs-3 col-xs-offset")
+
+    subrow
+        .append("div")
+        .attr("class", "col-xs-12 text-center random")
+        .attr("onselectstart", "return false")
+        .html(dataset_ord_str)
+
+    subrow
+        .append("div")
+        .attr("class", "col-xs-6 text-center binBtn random fixedOrder")
+        .attr("onselectstart", "return false")
+        .on("click", toggle_random)
+        .html(fixed_ord_str)
+    
+    subrow
+        .append("div")
+        .attr("class", "col-xs-6 text-center binBtn random randomOrder")
+        .attr("onselectstart", "return false")
+        .on("click", toggle_random)
+        .html(rand_ord_str)
+
+    update_random_button(randomize_data);
+
+    subrow = row
+        .append("div")
+        .attr("class", "col-xs-5 col-xs-offset")
+
+    subrow
+        .append("div")
+        .attr("class", "col-xs-12 text-center filter")
+        .attr("onselectstart", "return false")
+        .html(each_img_data_str)
+
+    subrow
+        .append("div")
+        .attr("class", "col-xs-6 text-center binBtn filter filterData")
+        .attr("onselectstart", "return false")
+        .on("click", toggle_data_each_img)
+        .html(filtered_str)
+
+    subrow
+        .append("div")
+        .attr("class", "col-xs-6 text-center binBtn filter allData")
+        .attr("onselectstart", "return false")
+        .on("click", toggle_data_each_img)
+        .html(all_data_str)
+
+    update_data_each_img_button(show_all_data_each_img);
+    
+    page_cnt_str = page_button_count.toString();
+    
+    submenu = param_menu
+        .append("div")
+        .attr("class", "questionSub")
+
+    add_search_submenu(submenu, 'ques', page_button_count);
+
+    row = submenu
+        .append("div")
+        .attr("class", "row")
+        .append("div")
+        .attr("class", "col-xs-10 col-xs-offset-1")
+
+    row
+        .append("div")
+        .attr("class", "col-xs-3 col-xs-offset-1 "
+                       + "text-center binBtn btn-binary")
+        .attr("onselectstart", "return false")
+        .on("click", function() {toggle_search_keep(ques_search_keep,
+                                                    'binary');})
+        .html(q_binary_str)
+
+    row
+        .append("div")
+        .attr("class", "col-xs-3 col-xs-offset-1 "
+                       +"text-center binBtn btn-number")
+        .attr("onselectstart", "return false")
+        .on("click", function() {toggle_search_keep(ques_search_keep,
+                                                    'number');})
+        .html(q_number_str)
+    
+    row
+        .append("div")
+        .attr("class", "col-xs-3 col-xs-offset-1 "
+                        + "text-center binBtn btn-other")
+        .attr("onselectstart", "return false")
+        .on("click", function() {toggle_search_keep(ques_search_keep,
+                                                    'other');})
+        .html(q_other_str)
+
+    update_search_keep_button(ques_search_keep);
+
+    submenu = param_menu
+        .append("div")
+        .attr("class", "answerSub")
+
+    add_search_submenu(submenu, 'ans', page_button_count);
+
+    row = submenu
+        .append("div")
+        .attr("class", "row")
+        .append("div")
+        .attr("class", "col-xs-10 col-xs-offset-1")
+
+    row
+        .append("div")
+        .attr("class", "col-xs-3 col-xs-offset-3 text-center binBtn btn-gta")
+        .attr("onselectstart", "return false")
+        .on("click", function() {toggle_search_keep(ans_search_keep, 'gta');})
+        .html(a_gt_str)
+
+    row
+        .append("div")
+        .attr("class", "col-xs-3 col-xs-offset-1 text-center binBtn btn-csa")
+        .attr("onselectstart", "return false")
+        .on("click", function() {toggle_search_keep(ans_search_keep, 'csa');})
+        .html(a_cs_str)
+
+    update_search_keep_button(ans_search_keep);
+
+    submenu = param_menu
+        .append("div")
+        .attr("class", "captionSub")
+
+    add_search_submenu(submenu, 'cap', page_button_count);     
+    
+    submenu = menu
+//         .append("div")
+//         .attr("class", "col-xs-5")
+
+//     submenu
+    submenu = param_menu
+        .append("div")
+        .attr("class", "annSub")
+
+    row = submenu
+        .append("div")
+        .attr("class", "row")
+
+    row
+        .append("div")
+        .attr("class", "col-xs-12")
+        .html(ann_obj_str)
+
+    row = submenu
+        .append("div")
+        .attr("id", "categories")
+        .attr("class", "row")
+
+    search_div = menu
+        .append("div")
+        .attr("class", "searchSub")
+    submenu = search_div
+        .append("div")
+        .attr("class", "row")
+
+    row = submenu
+//         .append("div")
+//         .attr("class", "row")
+
+    input_html = '<button onclick="execute_search()">Search</button>';
+    row
+        .append("div")
+        .attr("class", "col-xs-1 col-xs-offset-5 text-center querySearchDiv ")
+        .html(input_html)
+
+//     submenu = menu
+//         .append("div")
+//         .attr("class", "stats")
+
+//     row = submenu
+//         .append("div")
+//         .attr("class", "row")
+
+
+    img_str = 'Image Percentage: <span class="numSearchImgs">' 
+                + num_search_imgs.toString() 
+                + '</span>/<span class="numTotalImgs">' 
+                + num_total_imgs.toString() 
+                + '</span> = <span class="percImgs">' 
+                + (100*num_search_imgs/num_total_imgs).toFixed(STATS_DECIMALS) 
+                + '</span>%' + '</br>';
+    q_str = 'Question Percentage: <span class="numSearchQs">' 
+                + num_search_qs.toString() 
+                + '</span>/<span class="numTotalQs">' 
+                + num_total_qs.toString() 
+                + '</span> = <span class="percQs">' 
+                + (100*num_search_qs/num_total_qs).toFixed(STATS_DECIMALS) 
+                + '</span>%' + '</br>';
+    a_str = 'Answer Percentage: <span class="numSearchAs">' 
+                + num_search_as.toString() 
+                + '</span>/<span class="numTotalAs">' 
+                + num_total_as.toString() 
+                + '</span> = <span class="percAs">' 
+                + (100*num_search_as/num_total_as).toFixed(STATS_DECIMALS) 
+                + '</span>%' + '</br>';
+    cap_str = 'Caption Percentage: <span class="numSearchCaps">' 
+                + num_search_caps.toString() 
+                + '</span>/<span class="numTotalCaps">' 
+                + num_total_caps.toString() 
+                + '</span> = <span class="percCaps">' 
+                + (100*num_search_caps/num_total_caps).toFixed(STATS_DECIMALS) 
+                + '</span>%' + '</br>';
+
+    row
+        .append("div")
+        .attr("class", "col-xs-5 col-xs-offset-1 searchStats")
+        .attr("style", "margin-top:10px;")
+        .html(img_str+q_str+a_str+cap_str)
+    
+    row
+        .append("div")
+        .attr("class", "col-xs-5 col-xs-offset-1 searchStatsLoading")
+        .attr("style", "margin-top:10px;")
+        .html(executing_search_str)
+
+    set_search_stats('done');   
+
+    update_search_stats(num_search_imgs,
+                        num_total_imgs,
+                        num_search_qs,
+                        num_total_qs,
+                        num_search_as,
+                        num_total_as,
+                        num_search_caps,
+                        num_total_caps);
+                        
+    search_div
+        .append("div")
+        .attr("class", "row oneDashedRow")
+        .style("margin-bottom", "15px")
+
+    submenu = menu
+        .append("div")
+        .attr("class", "viewSub")
+
+    row = submenu
+        .append("div")
+        .attr("class", "row")
+
+    col = row
+        .append("div")
+        .attr("class", "col-xs-10 dataView1")
+
+    col
+        .append("div")
+        .attr("class", "col-xs-11 text-center dataView")
+        .html(data_view_str)
+
+    for (var idx = 0; idx < avail_views.length; idx++) {
+        col.append("div")
+            .attr("class", "col-xs-2 text-center binBtn dataView btn-view-" 
+                            + avail_views[idx])
+            .attr("onselectstart", "return false")
+            .attr("onclick", "toggle_data_view(avail_views["+idx+"])" )
+            .html(view_strs[avail_views[idx]])
+    }
+
+    update_data_view_button(data_on_which_view);
+
+    col = row
+        .append("div")
+        .attr("class", "col-xs-2 dataView2")
+
+    col
+        .append("div")
+        .attr("class", "col-xs-12 text-center dataView")
+        .html(all_imgs_head_str)
+
+    col
+        .append("div")
+        .attr("class", "col-xs-12 text-center binBtn showAllImgs")
+        .attr("onselectstart", "return false")
+        .on("click", toggle_img_show_all)
+        .html(all_imgs_on_str)
+
+    update_img_show_all_button(all_imgs_on);
+
+    submenu = menu
+        .append("div")
+        .attr("class", "pageSub")
+
+    row = submenu
+        .append("div")
+        .attr("class", "row")
+
+    row
+        .append("div")
+        .attr("class", "col-xs-1 col-xs-offset-4 text-center binBtn prevPage")
+        .text("Prev")
+        .attr("onselectstart", "return false")
+        .on("click", prev_page)
+
+    input_html = '<label>Page: '
+    input_html += '<input class="pageNumSpan pNS' + page_cnt_str 
+    input_html += '" type="text" '
+    input_html += 'style="width:25%; margin:0%; padding:2px; display:inline">';
+    input_html += '/<span class="numPages">3</span>'
+    input_html += '</label>';
+    
+    key_press_func = "page_key_press(event, " + page_button_count + ");"
+
+    row
+        .append("div")
+        .attr("onkeyup", key_press_func)
+        .attr("class", "col-xs-2 pageNumDiv text-center")
+        .html(input_html)
+
+    page_button_count += 1;
+
+    update_page_info(cur_page, num_pages);
+
+    row
+        .append("div")
+        .attr("class", "col-xs-1 text-center binBtn nextPage")
+        .text("Next")
+        .attr("onselectstart", "return false")
+        .on("click", next_page)
+
+}
+
+function update_menu_visibility(menu_type) {
+
+    menu_id = "menu_" + menu_type;
+    menu = d3.select('#' + menu_id);
+    if (menu_display[menu_type] == '') {
+        menu_display[menu_type] = menu.style('display');
+    }
+
+    cur_data = json_data_pages[cur_page];
+
+    if (cur_data == undefined || cur_data.length < MIN_FOR_BOT_MENU) {
+        menu.style('display', 'none');
+    } else {
+        menu.style('display', menu_display[menu_type])
+    }
+
+}
+
+function add_search_submenu(submenu, type, page_button_count) {
+
+    row = submenu
+    .append("div")
+    .attr("class", "row")
+
+    input_html = search_prompt_strs[type] 
+                + '<input class="' + type + 'SearchSpan ' 
+                + type + 'SStr' + page_button_count + '" type="text" '
+                + 'style="padding:0px; width:80%; display:inline" '
+                + 'value="' + search_strs[type] + '">';
+
+    callback = "search_key_press(event, '" + type + "', " 
+                + page_button_count + ");"
+    row
+    .append("div")
+    .attr("onkeyup", callback)
+    .attr("class", "col-xs-11 col-xs-offset querySearchDiv text-center")
+    .html(input_html)
+
+    row = submenu
+    .append("div")
+    .attr("class", "row")
+    .append("div")
+    .attr("class", "col-xs-10 col-xs-offset-1")
+
+    row
+    .append("div")
+    .attr("class", "col-xs-2 col-xs-offset-1 text-center binBtn cSTContain " 
+                    + type + "-" + avail_search_methods[0])
+    .attr("onselectstart", "return false")
+    .on("click", function() {
+                    select_search_method(type, avail_search_methods[0]);
+                    })
+    .html(cont_str)
+
+    row
+    .append("div")
+    .attr("class", "col-xs-2 col-xs-offset-1 text-center binBtn cSTStart " 
+                    + type + "-" + avail_search_methods[1])
+    .attr("onselectstart", "return false")
+    .on("click", function() {
+                    select_search_method(type, avail_search_methods[1]);
+                    })
+    .html(start_str)
+
+    row
+    .append("div")
+    .attr("class", "col-xs-2 col-xs-offset-1 text-center binBtn cSTEnd " 
+                    + type + "-" + avail_search_methods[2])
+    .attr("onselectstart", "return false")
+    .on("click", function() {
+                    select_search_method(type, avail_search_methods[2]);
+                    })
+    .html(end_str)
+
+    row
+    .append("div")
+    .attr("class", "col-xs-2 col-xs-offset-1 text-center binBtn cSTRegex " 
+                    + type + "-" + avail_search_methods[3])
+    .attr("onselectstart", "return false")
+    .on("click", function() {
+                    select_search_method(type, avail_search_methods[3]);
+                    })
+    .html(regex_str)
+
+    update_search_method(search_methods, type);            
+    select_search_method(type, avail_search_methods[DEFAULT_SEARCH_MTD_IDX]);
+
+}
+
+function set_search_stats(status) {
+
+    vals = d3.selectAll(".searchStats")
+    load = d3.selectAll(".searchStatsLoading")
+
+    if (stats_display['vals'] == ''
+        && vals.style('display') != undefined) {
+        stats_display['vals'] = vals.style('display');
+    }
+
+    if (stats_display['load'] == ''
+        && load.style('display') != undefined) {
+        stats_display['load'] = load.style('display');
+    }
+
+    if (status == 'searching') {
+        vals.style("display", "none");
+        load.style("display", stats_display['load']);
+    } else {
+        vals.style("display", stats_display['vals']);
+        load.style("display", "none");
+    }
+
+}
+
+function render_results(json_data_subset) {
+
+    update_menu_visibility(MENU_BOT);
+
+    set_search_stats('done');
+
+    cont = d3.select("div.results");
+
+    if (json_data_subset != undefined) {
+    
+        cont.selectAll("div.oneImgRow").remove();
+        cont.selectAll("div.img").remove();
+
+        cont.selectAll("div.img")
+        .data(json_data_subset)
+        .enter()
+        .append("div")
+        .attr("class", "row oneImgRow")
+        .append("div")
+        .attr("class", "col-xs-12")
+        .append("div")
+        .attr("class", "row img")
+        .attr("style", "margin-top:30px; margin-bottom:30px;")
+        .append("div")
+        .attr("class", "col-xs-12")
+        .each(create_element_div)
+    }
+
+    update_img_show_all(all_imgs_on);
+    update_data_view();
+
+}
+
+function create_element_div(d) {
+    
+    img_name = d.img.slice(0, -4);
+    
+    row_div = d3.select(this)
+        .append("div")
+        .attr("class", "row headings")
+    
+    row_div
+        .append("div")
+        .attr("class", "col-xs-5 text-center imgHeading")
+        .text( d.uniqueIndex + '. ' + img_name )
+
+    data_btn = row_div
+        .append("div")
+        .attr("class", "col-xs-7 dataButtons")
+    
+    for (var idx = 0; idx < avail_views.length; idx++) {
+
+        cur_dv = avail_views[idx];
+
+        if (cur_dv == 'mc') {
+            col_class = "col-xs-3";
+        } else {
+            col_class = "col-xs-2";
+        }
+        
+        data_btn
+            .append("div")
+
+            .attr("class", "binBtn text-center btn-" 
+                            + cur_dv + " " + img_name + " " + col_class)
+            .style("padding", "2px")
+            .attr("onselectstart", "return false")
+            .on("click", toggle_img_data_view)
+            .html(view_strs[avail_views[idx]])
+    }
+
+    img_row_div = d3.select(this)
+        .append("div")
+        .attr("class", "row data")
+
+    img_div = img_row_div
+        .append("div")
+        .attr("class", "col-xs-5 imageDiv")
+
+    img_div
+        .append("div")
+        .attr("class", "col-xs-6 col-xs-offset-3 text-center "
+                        + "binBtn btn-img btn-img-"
+                        + img_name)
+        .attr("onselectstart", "return false")
+        .on("click", toggle_img)
+        .html(show_img_btn_str)
+    
+    img_div
+        .append("div")
+        .attr("class", "col-xs-12 image "+ img_name)
+        .style("opacity", all_imgs_on)
+//         .on("click", toggle_img)
+        .html(create_img_html(d.url))
+
+    data_div = img_row_div
+        .append("div")
+        .attr("class", "col-xs-6 dataDiv")
+        
+    for (var idx = 0; idx < avail_views.length; idx++) {
+        cur_dv = avail_views[idx];
+        cur_fnc = view_functions[cur_dv];
+        // E.g., create_oe_div
+        cur_fnc(data_div, cur_dv, d);
+    }
+
+}
+
+function create_oe_div(data_div, name, d) {
+
+    img_name = d.img.slice(0, -4);
+
+    if (data_on_which_view == name) {
+        def_display = "";
+    } else {
+        def_display = "none";
+    }
+
+    temp = data_div.append("div")
+        .attr("class", "col-xs-12 data-" + name + " " + img_name)
+        .style("display", def_display)
+
+    questions = d.questions;
+    for (var idx = 0; idx < questions.length; idx++) {
+        quesData = questions[idx];
+        temp
+            .append("div")
+            .attr("class", "row question")
+            .style("margin-top", "10px")
+            .text("Q: " + quesData.quesStr)
+    }
+
+}
+
+function create_mc_div(qAndDiv, name, d) {
+    
+    img_name = d.img.slice(0, -4);
+
+    if (data_on_which_view == name) {
+        def_display = "";
+    } else {
+        def_display = "none";
+    }
+
+    temp = data_div.append("div")
+        .attr("class", "col-xs-12 data-" + name + " " + img_name)
+        .style("display", def_display)
+
+    questions = d.questions;
+    for (var idx = 0; idx < questions.length; idx++) {
+        quesData = questions[idx];
+
+        origMCOrder = quesData.ansMCImg;
+
+        if (randomize_mc == 0) {
+            finalMCOrder = top_k_ans.slice(0);
+            var unusedIdxs = [];
+            for (var i = 0; i < origMCOrder.length; i++) {
+                var curOrigAns = origMCOrder[i];
+                found = false;
+                for (var j = 0; j < top_k_ans.length; j++) {
+                    var curAns = top_k_ans[j];
+
+                    if (curAns == curOrigAns) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found == false) {
+                    unusedIdxs.push(i);
+                }
+            }
+
+            for (var i = 0; i < unusedIdxs.length; i++) {
+                finalMCOrder.push( origMCOrder[unusedIdxs[i]] );
+            }
+        } else {
+            finalMCOrder = origMCOrder.slice(0);
+        }
+
+        temp
+            .append("div")
+            .attr("class", "row question")
+            .style("margin-top", "10px")
+            .text('Q: '+ quesData.quesStr)
+        
+        openAnsHTML = '<span style="color:green">' 
+                    + view_strs[name] + ' Options:</span></br>';
+        temp.append("div")
+            .attr("class", "col-xs-12 text-center answerHeading")
+            .html(openAnsHTML)
+        
+        answers = temp
+            .append("div")
+            .attr("class", "row answer")
+            .append("div")
+            .attr("class", "col-xs-12")
+            .style("border-style", "solid")
+            .style("border-size", "2px")
+            .style("padding", "3px")
+            .style("overflow", "hidden")
+//             .style("height", "75px")
+
+            curAns = 0;
+            for (var i = 0; i < answers_mc_per_div.length; i++) {
+                openAnsHTML = '';
+                for (var j = 0; j < answers_mc_per_div[i]; j++) {
+                    if (curAns < finalMCOrder.length) {
+                        openAnsHTML += '<b>('+mc_prefix[curAns] + ')</b> '
+                                        + finalMCOrder[curAns] + "</br>";
+                        curAns +=1;
+                    }
+                }
+                answers.append("div")
+                    .attr("class", "answerMCData col-xs-" 
+                                    + answers_mc_per_div_col_size[i])
+                    .html(openAnsHTML)
+            }
+        }
+
+}
+
+function create_gt_div(data_div, name, d) {
+
+    img_name = d.img.slice(0, -4);
+
+    if (data_on_which_view == name) {
+        def_display = "";
+    } else {
+        def_display = "none";
+    }
+
+    temp = data_div.append("div")
+        .attr("class", "col-xs-12 data-" + name + " " + img_name)
+        .style("display", def_display)
+
+    questions = d.questions;
+    for (var idx = 0; idx < questions.length; idx++) {
+        quesData = questions[idx];
+
+        temp
+            .append("div")
+            .attr("class", "row question")
+            .style("margin-top", "10px")
+            .text("Q: " + quesData.quesStr)
+        answers = temp
+            .append("div")
+            .attr("class", "row answer")
+
+        openAnsHTML = '<span style="color:green">'
+                    + view_strs[name] + ' Answers:</span></br>';
+        answers.append("div")
+            .attr("class", "col-xs-12 text-center answerHeading")
+            .html(openAnsHTML)
+
+        answers = temp
+            .append("div")
+            .attr("class", "row answer")
+            .append("div")
+            .attr("class", "col-xs-12")
+            .style("border-style", "solid")
+            .style("border-size", "2px")
+            .style("padding", "3px")
+            .style("overflow", "hidden")
+
+        curAns = 0;
+        for (var i = 0; i < answers_gt_per_div.length; i++) {
+            openAnsHTML = '';
+            for (var j = 0; j < answers_gt_per_div[i]; j++) {
+                if (curAns < quesData.ansImg.length) {
+                    openAnsHTML += '<b>('+gt_prefix[curAns] + ')</b> '
+                                + quesData.ansImg[curAns].ansStr + "</br>";
+                    curAns +=1;
+                }
+            }
+            answers.append("div")
+                .attr("class", "answerData col-xs-" + 
+                                answers_gt_per_div_col_size[i])
+            .html(openAnsHTML)
+        }
+    }
+
+}
+
+function create_cs_div(data_div, name, d) {
+
+    img_name = d.img.slice(0, -4);
+
+    if (data_on_which_view == name) {
+        def_display = "";
+    } else {
+        def_display = "none";
+    }
+
+    temp = data_div.append("div")
+        .attr("class", "col-xs-12 data-" + name + " " + img_name)
+        .style("display", def_display)
+
+    questions = d.questions;
+    for (var idx = 0; idx < questions.length; idx++) {
+        quesData = questions[idx];
+            
+        temp
+            .append("div")
+            .attr("class", "row question")
+            .style("margin-top", "10px")
+            .text("Q: " + quesData.quesStr)
+        answers = temp
+            .append("div")
+            .attr("class", "row answer")
+
+        openAnsHTML = '<span style="color:green">' 
+                    + view_strs[name] + ' Answers:</span></br>';
+        answers.append("div")
+            .attr("class", "col-xs-12 text-center answerHeading")
+            .html(openAnsHTML)
+        
+        answers = temp
+            .append("div")
+            .attr("class", "row answer")
+            .append("div")
+            .attr("class", "col-xs-12")
+            .style("border-style", "solid")
+            .style("border-size", "2px")
+            .style("padding", "3px")
+            .style("overflow", "hidden")
+
+        curAns = 0;
+        for (var i = 0; i < answers_cs_per_div.length; i++) {
+            openAnsHTML = '';
+            for (var j = 0; j < answers_cs_per_div[i]; j++) {
+                if (curAns < quesData.ansNoImg.length) {
+                    openAnsHTML += '<b>('+gt_prefix[curAns] + ')</b> '
+                                + quesData.ansNoImg[curAns].ansStr + "</br>";
+                    curAns +=1;
+                }
+            }
+            answers.append("div")
+            .attr("class", "answerData col-xs-" 
+                            + answers_gt_per_div_col_size[i])
+            .html(openAnsHTML)
+        }
+    }
+
+}
+
+function create_cap_div(data_div, name, d) {
+
+    img_name = d.img.slice(0, -4);
+
+    if (data_on_which_view == name) {
+        def_display = "";
+    } else {
+        def_display = "none";
+    }
+
+    temp = data_div.append("div")
+        .attr("class", "col-xs-12 data-" + name + " " + img_name)
+        .style("display", def_display)
+
+    captions = d.captions;
+    for (var idx = 0; idx < captions.length; idx++) {
+        capData = captions[idx];
+        temp
+            .append("div")
+            .attr("class", "row caption")
+            .style("margin-top", "10px")
+            .text("C: " + capData.caption)
+    }
+
+}
+
+function create_img_html(img_name) {
+
+    html = "<img src='" + img_name +
+           "' class='img-responsive center-block' " +
+           "style='min-height:100px; max-height:400px; " +
+           "border-style: solid; border-width: 2px'" +
+           "alt='An image from the " 
+           + dataset_names[dataset] + " dataset.'" + ">";
+
+    return html;
+
+}
+
+function toggle_img(d) {
+
+    img_name = d.img.slice(0, -4);
+
+    di = d3.selectAll("div.image." + img_name);
+
+    dd = d3.select('.btn-img-' + img_name);
+
+    if (di.style("opacity") == 1) {
+        di.style("opacity", 0);
+        dd.classed('binBtnOn', false);
+    } else {
+        di.style("opacity", 1);
+        dd.classed('binBtnOn', true);
+    }
+
+}
+
+function toggle_img_data_view(d) {
+    
+    img_name = d.img.slice(0, -4);
+
+    cur_div = d3.select(this);
+    cur_classes = cur_div.attr("class");
+    cur_div_type = '';
+    method = '';
+
+    for (var idx = 0; idx < avail_views.length; idx++) {
+        cur_method = avail_views[idx];
+        if (cur_classes.indexOf('btn-' + cur_method) > -1) {
+            method = cur_method;
+        }
+        dd = d3.select(".btn-" + cur_method + "." + img_name);
+        da = d3.select(".data-" + cur_method + "." + img_name);
+        dd.classed("binBtnOn", false);
+        da.style("display", "none");
+    }
+
+    cur_div.classed("binBtnOn", true);
+    da = d3.select(".data-" + method + "." + img_name);
+    da.style("display", "");
+
+    // Toggle the image on/off if it is needed
+    di = d3.selectAll("div.image." + img_name);
+    if (di.style("opacity") == 1) {
+        if (method == 'cs') {
+            toggle_img(d);
+        }
+    } else {
+        if (method != 'cs') {
+            toggle_img(d);
+        }
+    }
+
+}
+
+function create_header(cont) {
+
+    cont
+        .append("div")
+        .attr("class", "contain-to-grid")
+        .append("nav")
+        .attr("class", "top-bar")
+        .attr("id", "hi")
+        .append("ul")
+        .attr("class", "title-area")
+        .append("li")
+        .attr("class", "name")
+        .html("");
+
+    cont
+        .select("#hi")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .attr("class", "active")
+        .append("a")
+        .attr("href", "http://visualqa.org/terms.html")
+        .attr("style", "font-size:16px; font-color: rgb(255,255,255)")
+        .html("Terms");
+
+    cont
+        .select("#hi")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .attr("class", "active")
+        .append("a")
+        .attr("href", "http://visualqa.org/vqa_browser/vqa_dataset.html")
+        .attr("style", "font-size:16px; color: rgb(255,255,255)")
+        .html("Browse");
+
+    cont
+        .select("#hi")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .attr("class", "active")
+        .append("a")
+        .attr("href", "http://visualqa.org/evaluation.html")
+        .attr("style", "font-size:16px; color: rgb(255,255,255)")
+        .html("Evaluation");
+
+    cont
+        .select("#hi")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .attr("class", "active")
+        .append("a")
+        .attr("href", "http://visualqa.org/download.html")
+        .attr("style", "font-size:16px; color: rgb(255,255,255)")
+        .html("Download");
+
+    cont
+        .select("#hi")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .attr("class", "active")
+        .append("a")
+        .attr("href", "http://cloudcv.org/vqa/")
+        .attr("style", "font-size:16px; color: rgb(255,255,255)")
+        .html("Demo");
+
+    cont
+        .select("#hi")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .attr("class", "active")
+        .append("a")
+        .attr("href", "https://github.com/VT-vision-lab/VQA_LSTM_CNN")
+        .attr("style", "font-size:16px; color: rgb(255,255,255)")
+        .html("Code");
+
+    cont
+        .select("#hi")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .attr("class", "active")
+        .append("a")
+        .attr("href", "http://visualqa.org/people.html")
+        .attr("style", "font-size:16px; color: rgb(255,255,255)")
+        .html("People");
+
+    cont
+        .select("#hi")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .attr("class", "active")
+        .append("a")
+        .attr("href", "http://visualqa.org/index.html")
+        .attr("style", "font-size:16px; color: rgb(255,255,255)")
+        .html("Home");
+
+    cont
+        .append("div")
+        .attr("class", "header")
+        .append("h1")
+        .attr("style", "font-size:32px; margin-top:6px;")
+        .html("VQA:");
+
+    cont
+        .append("img")
+        .attr("src","./static/img/main.png")
+        .attr("style", "height: 100px; position:absolute; top:4px; left:0px;")
+        .html("http://visualqa.org");
+
+    cont
+        .append("img")
+        .attr("src","./static/img/logo.png")
+        .attr("style", "height: 100px; position:absolute; top:4px;right:10px;")
+        .html("VQA: Visual Question Answering");
+
+    cont
+        .append("div")
+        .attr("class", "contain-to-grid")
+        .append("nav")
+        .attr("class", "top-bar")
+        .attr("style", "margin: 0 auto;")
+        .attr("id", "hil")
+        .append("ul")
+        .attr("class", "title-area")
+        .append("li")
+        .attr("class", "name")
+        .html("");
+
+    cont
+        .select("#hil")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .append("a")
+        .attr("href", "http://visualqa.org/terms.html")
+        .attr("style", "font-size:14px; font-color: rgb(255,255,255)")
+        .html("Terms");
+
+    cont
+        .select("#hil")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .append("a")
+        .attr("href", "http://visualqa.org/sponsors.html")
+        .attr("style", "font-size:14px; color: rgb(255,255,255)")
+        .html("Sponsors");
+
+    cont
+        .select("#hil")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .append("a")
+        .attr("href", "http://visualqa.org/visualize/index.html")
+        .attr("style", "font-size:14px; color: rgb(255,255,255)")
+        .html("Visualize");
+
+    cont
+        .select("#hil")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .attr("class", "active")
+        .append("a")
+        .attr("href", "http://visualqa.org/vqa_browser/vqa_dataset.html")
+        .attr("style", "font-size:14px; color: rgb(255,255,255)")
+        .html("Browse");
+
+    cont
+        .select("#hil")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .append("a")
+        .attr("href", "http://visualqa.org/challenge.html")
+        .attr("style", "font-size:14px; color: rgb(255,255,255)")
+        .html("Challenge");
+
+    cont
+        .select("#hil")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .append("a")
+        .attr("href", "http://visualqa.org/evaluation.html")
+        .attr("style", "font-size:14px; color: rgb(255,255,255)")
+        .html("Evaluation");
+
+    cont
+        .select("#hil")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .append("a")
+        .attr("href", "http://visualqa.org/download.html")
+        .attr("style", "font-size:14px; color: rgb(255,255,255)")
+        .html("Download");
+    
+    cont
+        .select("#hil")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .append("a")
+        .attr("href", "http://cloudcv.org/vqa/")
+        .attr("style", "font-size:14px; color: rgb(255,255,255)")
+        .html("Demo");
+
+    cont
+        .select("#hil")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .append("a")
+        .attr("href", "https://github.com/VT-vision-lab/VQA_LSTM_CNN")
+        .attr("style", "font-size:14px; color: rgb(255,255,255)")
+        .html("Code");
+
+    cont
+        .select("#hil")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .append("a")
+        .attr("href", "http://visualqa.org/people.html")
+        .attr("style", "font-size:14px; color: rgb(255,255,255)")
+        .html("People");
+
+    cont
+        .select("#hil")
+        .append("section").attr("class", "top-bar-section")
+        .append("ul")
+        .attr("class", "right")
+        .append("li")
+        .append("a")
+        .attr("href", "http://visualqa.org/index.html")
+        .attr("style", "font-size:14px; color: rgb(255,255,255)")
+        .html("Home");
+
+}
+
+function clear_redis() {
+    $.ajax({
+        url: browser_url,
+        type: 'GET',
+        data: {'redis': ''},
+        success: function(data) {
+                    console.log('Cleared Redis.')
+                  },
+        failure: function(data) { 
+                    console.log('Server error.');
+                  },
+         error: function ( jqXHR, textStatus, errorThrown) {
+                    console.log("errorThrown: " 
+                    + errorThrown + " textStatus:" + textStatus);
+                  }
+    })
+}
+
+    </script>
+</body>
+</html>
