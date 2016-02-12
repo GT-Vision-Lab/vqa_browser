@@ -141,7 +141,7 @@ def index_get_ajax(param):
 
     EXPIRE_TIME = datetime.datetime.now() \
                   + datetime.timedelta(days=1, seconds=0)
-
+    
     start = time.perf_counter()
 
     param_str = param_to_str(param)
@@ -368,7 +368,7 @@ def index_get_ajax(param):
                             EXPIRE_TIME)
 
         resp[data_name] = int(r_server.get(name))
-
+    
     total = time.perf_counter() - start
     logger.error('Response Time: {} s'.format(total))
 
@@ -579,7 +579,6 @@ def qa_search(Image,
             iqaid = Answer.objects.filter(Qr_ans) \
                     .values('image') \
                     .distinct()
-                
             if ret_qa_ids:
                 aid = Answer.objects.filter(Qr_ans) \
                     .order_by('ques_id', 'ans_num')
@@ -605,7 +604,7 @@ def get_page_data(all_imgs,
                   Caption,
                   Question,
                   Answer):
-    
+
     if rand_seed >= 0:
         indices = list(range(0, num_all_imgs))
         random.seed(rand_seed)
@@ -673,7 +672,6 @@ def get_page_data(all_imgs,
 
             img_obj['questions'] = questions
         else:
-            
             _, _, _, caps = caption_search(Caption,
                                                 search_methods['cap'],
                                                 search_strs['cap'],
@@ -759,7 +757,10 @@ def get_current_page_subset(cur_page, max_per_page,
     else:
         page_indices = \
             indices[cur_page*max_per_page:(cur_page+1)*max_per_page]
-        subset = map(data.__getitem__, 
-                     page_indices)
+        # If data is queryset object, the map was very slow...
+        if not isinstance(data, list):
+            data = list(data)
+        subset = list(map(data.__getitem__, 
+                     page_indices))
 
     return subset, page_indices, num_total_pages
