@@ -33,20 +33,46 @@
     </script>
 </head>
 
-<body>
-    <header>
-        <div class="row">
-            <a href="http://visualqa.org/"><img alt="VQA logo" src=
-            "./static/img/main.png" style=
-            "height: 100px; position:absolute; top:4px; left:0px;"></a>
 
-            <h1><img alt="Organization logos" src="./static/img/logo.png" 
-                     style="height: 100px;"><br>
-            </h1>
-            <br>
+<body class="off-canvas hide-extras">
+    <section role="main">
+        <header>
+            <div class="row">
+                <a href="http://visualqa.org/"><img style="height: 100px; position:absolute; top:4px; left:0px;" src="./static/img/main.png" alt="logo" /></a>
+                <h1><img style="height: 100px;" src="./static/img/logo.png" alt="logo" /><br></h1><br>
+            </div>
+        </header>
+        
+        <div class="contain-to-grid">
+            <nav class="top-bar" data-topbar>
+                <ul class="title-area">
+                    <li class="toggle-topbar menu-icon"><a href="#"><span>Menu</span></a>
+                    </li>
+                </ul>
+                <section class="top-bar-section">
+                    <!-- Right Nav Section -->
+                    <ul class="right">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="people.html">People</a></li>
+                        <li><a href="https://github.com/VT-vision-lab/VQA_LSTM_CNN" onClick="ga('send', 'event', { eventCategory: 'Outgoing Link', eventAction: 'Code', eventLabel: 'Code'});">Code</a><li>
+                        <li><a href="http://cloudcv.org/vqa/" onClick="ga('send', 'event', { eventCategory: 'Outgoing Link', eventAction: 'Demo', eventLabel: 'Demo'});">Demo</a><li>
+                        <li><a href="download.html">Download</a></li>
+                        <li><a href="evaluation.html">Evaluation</a></li>
+                        <li><a href="challenge.html">Challenge</a></li>
+                        <li class="active"><a href="/browser/" style="color: white;">Browse</a></li>
+                        <li><a href="http://visualqa.org/visualize/">Visualize</a></li>
+                        <li><a href="workshop.html">Workshop</a></li>
+                        <li><a href="sponsors.html">Sponsors</a></li>
+                        <li><a href="terms.html">Terms</a></li>
+                    </ul>
+                    
+                </section>
+            </nav>
         </div>
-    </header>
+    </section>
     
+    <section id="browser"></section>
+
     <script>
 
 var category_url = 
@@ -55,7 +81,6 @@ var category_url =
 var browser_url = 
     'http://marr.ece.vt.edu:8081/vqa_browser/';
 
-    
 var dataset_head_str = "Dataset: ";
 var dataset_ord_str = "Image Order: ";
 var fixed_ord_str = "Fixed";
@@ -239,13 +264,7 @@ function init() {
 
     toggle_random();
 
-    body = d3.select("body").html("");
-
-    cont = body
-    .append("div")
-    .attr("class", "off-canvas hide-extras")
-
-    create_header(cont);
+    cont = d3.select("#browser");
     
     page_button_count = 1;
     create_menu(cont, MENU_TOP);
@@ -1824,272 +1843,6 @@ function toggle_img_data_view(d) {
             toggle_img(d);
         }
     }
-
-}
-
-function create_header(cont) {
-
-    cont
-        .append("div")
-        .attr("class", "contain-to-grid")
-        .append("nav")
-        .attr("class", "top-bar")
-        .attr("id", "hi")
-        .append("ul")
-        .attr("class", "title-area")
-        .append("li")
-        .attr("class", "name")
-        .html("");
-
-    cont
-        .select("#hi")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .attr("class", "active")
-        .append("a")
-        .attr("href", "http://visualqa.org/terms.html")
-        .attr("style", "font-size:16px; font-color: rgb(255,255,255)")
-        .html("Terms");
-
-    cont
-        .select("#hi")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .attr("class", "active")
-        .append("a")
-        .attr("href", "http://visualqa.org/vqa_browser/vqa_dataset.html")
-        .attr("style", "font-size:16px; color: rgb(255,255,255)")
-        .html("Browse");
-
-    cont
-        .select("#hi")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .attr("class", "active")
-        .append("a")
-        .attr("href", "http://visualqa.org/evaluation.html")
-        .attr("style", "font-size:16px; color: rgb(255,255,255)")
-        .html("Evaluation");
-
-    cont
-        .select("#hi")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .attr("class", "active")
-        .append("a")
-        .attr("href", "http://visualqa.org/download.html")
-        .attr("style", "font-size:16px; color: rgb(255,255,255)")
-        .html("Download");
-
-    cont
-        .select("#hi")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .attr("class", "active")
-        .append("a")
-        .attr("href", "http://cloudcv.org/vqa/")
-        .attr("style", "font-size:16px; color: rgb(255,255,255)")
-        .html("Demo");
-
-    cont
-        .select("#hi")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .attr("class", "active")
-        .append("a")
-        .attr("href", "https://github.com/VT-vision-lab/VQA_LSTM_CNN")
-        .attr("style", "font-size:16px; color: rgb(255,255,255)")
-        .html("Code");
-
-    cont
-        .select("#hi")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .attr("class", "active")
-        .append("a")
-        .attr("href", "http://visualqa.org/people.html")
-        .attr("style", "font-size:16px; color: rgb(255,255,255)")
-        .html("People");
-
-    cont
-        .select("#hi")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .attr("class", "active")
-        .append("a")
-        .attr("href", "http://visualqa.org/index.html")
-        .attr("style", "font-size:16px; color: rgb(255,255,255)")
-        .html("Home");
-
-    cont
-        .append("div")
-        .attr("class", "header")
-        .append("h1")
-        .attr("style", "font-size:32px; margin-top:6px;")
-        .html("VQA:");
-
-    cont
-        .append("img")
-        .attr("src","./static/img/main.png")
-        .attr("style", "height: 100px; position:absolute; top:4px; left:0px;")
-        .html("http://visualqa.org");
-
-    cont
-        .append("img")
-        .attr("src","./static/img/logo.png")
-        .attr("style", "height: 100px; position:absolute; top:4px;right:10px;")
-        .html("VQA: Visual Question Answering");
-
-    cont
-        .append("div")
-        .attr("class", "contain-to-grid")
-        .append("nav")
-        .attr("class", "top-bar")
-        .attr("style", "margin: 0 auto;")
-        .attr("id", "hil")
-        .append("ul")
-        .attr("class", "title-area")
-        .append("li")
-        .attr("class", "name")
-        .html("");
-
-    cont
-        .select("#hil")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .append("a")
-        .attr("href", "http://visualqa.org/terms.html")
-        .attr("style", "font-size:14px; font-color: rgb(255,255,255)")
-        .html("Terms");
-
-    cont
-        .select("#hil")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .append("a")
-        .attr("href", "http://visualqa.org/sponsors.html")
-        .attr("style", "font-size:14px; color: rgb(255,255,255)")
-        .html("Sponsors");
-
-    cont
-        .select("#hil")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .append("a")
-        .attr("href", "http://visualqa.org/visualize/index.html")
-        .attr("style", "font-size:14px; color: rgb(255,255,255)")
-        .html("Visualize");
-
-    cont
-        .select("#hil")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .attr("class", "active")
-        .append("a")
-        .attr("href", "http://visualqa.org/vqa_browser/vqa_dataset.html")
-        .attr("style", "font-size:14px; color: rgb(255,255,255)")
-        .html("Browse");
-
-    cont
-        .select("#hil")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .append("a")
-        .attr("href", "http://visualqa.org/challenge.html")
-        .attr("style", "font-size:14px; color: rgb(255,255,255)")
-        .html("Challenge");
-
-    cont
-        .select("#hil")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .append("a")
-        .attr("href", "http://visualqa.org/evaluation.html")
-        .attr("style", "font-size:14px; color: rgb(255,255,255)")
-        .html("Evaluation");
-
-    cont
-        .select("#hil")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .append("a")
-        .attr("href", "http://visualqa.org/download.html")
-        .attr("style", "font-size:14px; color: rgb(255,255,255)")
-        .html("Download");
-    
-    cont
-        .select("#hil")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .append("a")
-        .attr("href", "http://cloudcv.org/vqa/")
-        .attr("style", "font-size:14px; color: rgb(255,255,255)")
-        .html("Demo");
-
-    cont
-        .select("#hil")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .append("a")
-        .attr("href", "https://github.com/VT-vision-lab/VQA_LSTM_CNN")
-        .attr("style", "font-size:14px; color: rgb(255,255,255)")
-        .html("Code");
-
-    cont
-        .select("#hil")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .append("a")
-        .attr("href", "http://visualqa.org/people.html")
-        .attr("style", "font-size:14px; color: rgb(255,255,255)")
-        .html("People");
-
-    cont
-        .select("#hil")
-        .append("section").attr("class", "top-bar-section")
-        .append("ul")
-        .attr("class", "right")
-        .append("li")
-        .append("a")
-        .attr("href", "http://visualqa.org/index.html")
-        .attr("style", "font-size:14px; color: rgb(255,255,255)")
-        .html("Home");
 
 }
 

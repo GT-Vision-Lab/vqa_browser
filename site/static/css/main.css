@@ -11,6 +11,17 @@ header {
     top: 0;
 }
 
+.unilist li {
+    list-style: none;
+    line-height: 1.5em;
+}
+
+.unibull {
+    float: left;
+    width: 0;
+    margin-left: -25px;
+}
+
 header img {
     position: absolute;
     top: 4px;
